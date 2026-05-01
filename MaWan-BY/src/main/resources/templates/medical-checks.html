@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleMedicalChecks">体检记录 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown"
+                            data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                            data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/medical-checks"
+                                data-i18n="navMedicalChecks">🏥 体检记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donations" data-i18n="navDonations">💉 捐献记录</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/appointments" data-i18n="navAppointments">📅
+                                预约管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/reports" data-i18n="navReports">📈 统计报表</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/users" data-i18n="navUsers">⚙️ 用户管理</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3 border-bottom">
+                    <h2 data-i18n="headingMedicalChecks">体检记录管理</h2>
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="page-toolbar">
+                        <div class="filter-grid">
+                            <div>
+                                <input type="text" class="form-control" id="donorSearch" placeholder="搜索捐献者ID..."
+                                    data-i18n-placeholder="mcSearchPlaceholder">
+                            </div>
+                            <div>
+                                <input type="datetime-local" class="form-control" id="fromDate" placeholder="开始日期"
+                                    data-i18n-placeholder="mcFromPlaceholder">
+                            </div>
+                            <div>
+                                <input type="datetime-local" class="form-control" id="toDate" placeholder="结束日期"
+                                    data-i18n-placeholder="mcToPlaceholder">
+                            </div>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-outline-primary" type="button" id="searchBtn">
+                                <span class="me-1">🔍</span><span data-i18n="mcButtonSearch">搜索</span>
+                            </button>
+                            <button class="btn btn-primary add-record-btn" data-bs-toggle="modal" data-bs-target="#checkModal"
+                                onclick="openAddModal()">
+                                <span class="icon-dot">＋</span>
+                                <span class="label" data-i18n="mcButtonAdd">添加体检记录</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="mcTableId">ID</th>
+                                    <th data-i18n="mcTableDonor">捐献者</th>
+                                    <th data-i18n="mcTableCheckDate">体检日期</th>
+                                    <th data-i18n="mcTableHemoglobin">血红蛋白(g/L)</th>
+                                    <th data-i18n="mcTableBloodPressure">血压(mmHg)</th>
+                                    <th data-i18n="mcTableConclusion">结论</th>
+                                    <th data-i18n="mcTableActions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="checkTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center" data-i18n="textLoading">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav>
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </nav>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加/编辑体检记录模态框 -->
+    <div class="modal fade" id="checkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle" data-i18n="mcModalTitleAdd">添加体检记录</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="checkForm">
+                        <input type="hidden" id="checkId">
+                        <div class="mb-3">
+                            <label class="form-label" for="donorId" data-i18n="mcLabelDonorId">捐献者ID *</label>
+                            <input type="text" class="form-control" id="donorId" list="donorOptions" required
+                                pattern="\d+">
+                            <datalist id="donorOptions"></datalist>
+                            <div class="form-text" data-i18n="mcDonorHint">可直接输入ID或从下拉列表中选择捐献者</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="checkDate" data-i18n="mcLabelCheckDatetime">体检日期时间 *</label>
+                            <input type="datetime-local" class="form-control" id="checkDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="hemoglobin" data-i18n="mcLabelHemoglobin">血红蛋白(g/L)</label>
+                            <input type="number" step="0.1" class="form-control" id="hemoglobin" min="0">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="systolicPressure"
+                                    data-i18n="mcLabelSystolic">收缩压(mmHg)</label>
+                                <input type="number" class="form-control" id="systolicPressure" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="diastolicPressure"
+                                    data-i18n="mcLabelDiastolic">舒张压(mmHg)</label>
+                                <input type="number" class="form-control" id="diastolicPressure" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="conclusion" data-i18n="mcLabelConclusion">结论 *</label>
+                            <select class="form-select" id="conclusion" required>
+                                <option value="">{{' '}}</option>
+                                <option value="FIT" data-i18n="mcConclusionFit">合格</option>
+                                <option value="UNFIT" data-i18n="mcConclusionUnfit">不合格</option>
+                                <option value="NEEDS_RECHECK" data-i18n="mcConclusionRecheck">需要复查</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCheck()"
+                        data-i18n="labelSave">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script th:src="@{/js/dateUtils.js}"></script>
+    <script th:src="@{/js/dateUtils.js}"></script>
+    <script>
+        let currentPage = 0;
+        const pageSize = 10;
+        let donorsCache = [];
+
+        $(document).ready(function () {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+
+            $('#currentUser').text(localStorage.getItem('username') || t('textUserPlaceholder'));
+            $('#logoutBtn').on('click', function (e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+            });
+
+            loadChecks();
+            loadDonorOptions();
+            $('#searchBtn').on('click', function () { currentPage = 0; loadChecks(); });
+            
+            // 确保日期输入框初始化
+            if (window.initDateInputs) {
+                setTimeout(window.initDateInputs, 200);
+            }
+        });
+
+        function loadChecks() {
+            const token = localStorage.getItem('token');
+            const donorId = $('#donorSearch').val();
+            const fromDate = $('#fromDate').val();
+            const toDate = $('#toDate').val();
+
+            let url = `/api/medical-checks?page=${currentPage}&size=${pageSize}`;
+            if (donorId) url += `&donorId=${donorId}`;
+            if (fromDate) url += `&fromDate=${fromDate}:00`;
+            if (toDate) url += `&toDate=${toDate}:00`;
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        displayChecks(response.data.content || []);
+                        updatePagination(response.data.totalPages || 0);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = t('toastLoadFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                    $('#checkTableBody').html(`<tr><td colspan="7" class="text-center text-danger">${errorMsg}</td></tr>`);
+                }
+            });
+        }
+
+        function displayChecks(checks) {
+            if (checks.length === 0) {
+                $('#checkTableBody').html(`<tr><td colspan="7" class="text-center text-muted">${t('textNoData')}</td></tr>`);
+                return;
+            }
+
+            const conclusionMap = {
+                'FIT': `<span class="badge bg-success">${t('mcConclusionFit')}</span>`,
+                'UNFIT': `<span class="badge bg-danger">${t('mcConclusionUnfit')}</span>`,
+                'NEEDS_RECHECK': `<span class="badge bg-warning">${t('mcConclusionRecheck')}</span>`
+            };
+
+            let html = '';
+            checks.forEach(function (check) {
+                const checkDate = DateUtils.formatDateTime(check.checkDate);
+                const bp = check.systolicPressure && check.diastolicPressure ?
+                    `${check.systolicPressure}/${check.diastolicPressure}` : t('textUnknown');
+                const donorName = check.donorName || `ID: ${check.donorId}`;
+
+                html += `
+                    <tr>
+                        <td>${check.id || t('textUnknown')}</td>
+                        <td>${donorName}</td>
+                        <td>${checkDate}</td>
+                        <td>${check.hemoglobin || t('textUnknown')}</td>
+                        <td>${bp}</td>
+                        <td>${conclusionMap[check.conclusion] || t('textUnknown')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewCheck(${check.id})" title="${t('actionViewTitle')}">👁️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            $('#checkTableBody').html(html);
+        }
+
+        function updatePagination(totalPages) {
+            let html = '';
+            for (let i = 0; i < totalPages; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadChecks();
+        }
+
+        function openAddModal() {
+            $('#modalTitle').text(t('mcModalTitleAdd'));
+            $('#checkForm')[0].reset();
+            $('#checkId').val('');
+            $('#donorId').val('');
+        }
+
+        function viewCheck(id) {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: `/api/medical-checks/${id}`,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        const check = response.data;
+                        const conclusionMap = {
+                            'FIT': t('mcConclusionFit'),
+                            'UNFIT': t('mcConclusionUnfit'),
+                            'NEEDS_RECHECK': t('mcConclusionRecheck')
+                        };
+                        const detail = `${t('mcDetailTitle')}\n\n${t('mcDetailDonor')}: ${check.donorName || `ID: ${check.donorId}`}\n${t('mcDetailDate')}: ${DateUtils.formatDateTime(check.checkDate)}\n${t('mcDetailHemoglobin')}: ${check.hemoglobin || t('textUnknown')} g/L\n${t('mcDetailBloodPressure')}: ${check.systolicPressure || t('textUnknown')}/${check.diastolicPressure || t('textUnknown')} mmHg\n${t('mcDetailConclusion')}: ${conclusionMap[check.conclusion] || t('textUnknown')}`;
+                        alert(detail);
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = t('toastLoadDetailFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function saveCheck() {
+            if (!$('#checkForm')[0].checkValidity()) {
+                $('#checkForm')[0].reportValidity();
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const donorIdRaw = $('#donorId').val().trim();
+            if (!/^\d+$/.test(donorIdRaw)) {
+                showToast('error', t('mcToastInvalidDonorId'));
+                return;
+            }
+            const formattedCheckDate = DateUtils.formatDateTimeForApi($('#checkDate').val());
+            if (!formattedCheckDate) {
+                showToast('error', t('mcToastInvalidDatetime'));
+                return;
+            }
+            const data = {
+                donorId: parseInt(donorIdRaw, 10),
+                checkDate: formattedCheckDate,
+                hemoglobin: $('#hemoglobin').val() ? parseFloat($('#hemoglobin').val()) : null,
+                systolicPressure: $('#systolicPressure').val() ? parseInt($('#systolicPressure').val()) : null,
+                diastolicPressure: $('#diastolicPressure').val() ? parseInt($('#diastolicPressure').val()) : null,
+                conclusion: $('#conclusion').val()
+            };
+
+            $.ajax({
+                url: '/api/medical-checks',
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function (response) {
+                    $('#checkModal').modal('hide');
+                    loadChecks();
+                    showToast('success', t('toastSaveSuccess'));
+                },
+                error: function (xhr) {
+                    let errorMsg = t('toastSaveFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function loadDonorOptions() {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: '/api/donors?page=0&size=200',
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        donorsCache = response.data.content || [];
+                        renderDonorOptions();
+                    }
+                },
+                error: function () {
+                    console.warn('加载捐献者列表失败');
+                }
+            });
+        }
+
+        function renderDonorOptions() {
+            if (!Array.isArray(donorsCache)) return;
+            const optionsHtml = donorsCache.map(donor => {
+                const name = getDonorDisplayName(donor);
+                return `<option value="${donor.id}">${name} (ID: ${donor.id})</option>`;
+            }).join('');
+            $('#donorOptions').html(optionsHtml);
+        }
+
+        function getDonorDisplayName(donor) {
+            if (!donor) return t('textUnknown');
+            const displayName = [donor.firstName, donor.lastName].filter(Boolean).join(' ') || donor.fullName || donor.name;
+            return displayName || t('textUnknown');
+        }
+
+        function formatDateTimeForApi(value) {
+            if (!value) return null;
+            let formatted = value.trim();
+            if (!formatted) return null;
+            formatted = formatted.replace(/\//g, '-');
+            if (!formatted.includes('T') && formatted.includes(' ')) {
+                formatted = formatted.replace(' ', 'T');
+            }
+            if (formatted.includes('T') && formatted.length === 16) {
+                formatted += ':00';
+            }
+            const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+            return isoPattern.test(formatted) ? formatted : null;
+        }
+
+        function showToast(type, message) {
+            const bgColor = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            setTimeout(() => $('.toast').last().remove(), 3000);
+        }
+    </script>
+</body>
+
+</html>

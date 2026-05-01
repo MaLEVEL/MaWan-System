@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleReports">统计报表 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown" data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/medical-checks" data-i18n="navMedicalChecks">🏥 体检记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donations" data-i18n="navDonations">💉 捐献记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/appointments" data-i18n="navAppointments">📅 预约管理</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/reports" data-i18n="navReports">📈 统计报表</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/users" data-i18n="navUsers">⚙️ 用户管理</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3 border-bottom">
+                    <h2 data-i18n="headingReports">统计报表</h2>
+                </div>
+
+                <div class="page-toolbar">
+                    <div class="filter-grid">
+                        <div>
+                            <label for="fromDate" class="form-label visually-hidden" data-i18n="repFilterFrom">开始时间</label>
+                            <input type="datetime-local" class="form-control" id="fromDate" data-i18n-placeholder="repFilterFrom">
+                        </div>
+                        <div>
+                            <label for="toDate" class="form-label visually-hidden" data-i18n="repFilterTo">结束时间</label>
+                            <input type="datetime-local" class="form-control" id="toDate" data-i18n-placeholder="repFilterTo">
+                        </div>
+                    </div>
+                    <div class="action-row">
+                        <button class="btn btn-outline-primary" type="button" onclick="loadReports()">
+                            <span class="me-1">↻</span><span data-i18n="repButtonRefresh">刷新数据</span>
+                        </button>
+                        <button class="btn btn-ghost" type="button" onclick="resetDates()">
+                            <span class="me-1">🧹</span><span data-i18n="repButtonReset">重置</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="totalDonations">-</h3>
+                            <p data-i18n="repStatTotalDonations">总捐献次数</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h3 id="bloodDonations">-</h3>
+                            <p data-i18n="repStatBloodDonations">血液捐献</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h3 id="marrowDonations">-</h3>
+                            <p data-i18n="repStatMarrowDonations">骨髓捐献</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <h3 id="totalVolume">-</h3>
+                            <p data-i18n="repStatTotalVolume">总捐献量(ml)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:20px;">
+                    <div class="content-card" style="width:300px;flex-shrink:0;">
+                        <h4 data-i18n="repChartDonationType">捐献类型统计</h4>
+                        <div style="width:220px;height:220px;margin:0 auto;">
+                            <canvas id="donationTypeChart" aria-label="donation type chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-card" style="flex:1;min-width:0;">
+                        <h4 data-i18n="repChartInventory">库存按血型统计</h4>
+                        <canvas id="inventoryChart" aria-label="inventory chart"></canvas>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script>
+        let donationChart, inventoryChart;
+
+        function getLocale() {
+            const lang = window.LanguageManager?.getCurrent?.() || localStorage.getItem('app_lang') || 'zh';
+            if (lang === 'en') return 'en-US';
+            if (lang === 'ru') return 'ru-RU';
+            return 'zh-CN';
+        }
+
+        $(document).ready(function() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+            
+            $('#currentUser').text(localStorage.getItem('username') || t('textUserPlaceholder'));
+            $('#logoutBtn').on('click', function(e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+            });
+            
+            $('.lang-option').on('click.reports', () => setTimeout(loadReports, 300));
+            loadReports();
+        });
+
+        function resetDates() {
+            $('#fromDate').val('');
+            $('#toDate').val('');
+            loadReports();
+        }
+
+        function loadReports() {
+            const token = localStorage.getItem('token');
+            const fromDate = $('#fromDate').val();
+            const toDate = $('#toDate').val();
+            
+            let url = '/api/reports/donations/summary';
+            if (fromDate) url += `?fromDate=${fromDate}:00`;
+            if (toDate) {
+                url += fromDate ? '&' : '?';
+                url += `toDate=${toDate}:00`;
+            }
+            
+            $.ajax({
+                url: url,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        updateDonationStats(response.data);
+                        updateDonationChart(response.data);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('load donation summary failed', xhr);
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('username');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    showToast('error', t('repToastDonationFail'));
+                }
+            });
+            
+            $.ajax({
+                url: '/api/reports/inventory/by-blood-group',
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        updateInventoryChart(response.data);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('load inventory summary failed', xhr);
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('username');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    showToast('error', t('repToastInventoryFail'));
+                }
+            });
+        }
+
+        function updateDonationStats(data) {
+            $('#totalDonations').text(data.totalDonations || 0);
+            $('#bloodDonations').text(data.bloodDonations || 0);
+            $('#marrowDonations').text(data.boneMarrowDonations || 0);
+            $('#totalVolume').text(data.totalVolume || 0);
+        }
+
+        function updateDonationChart(data) {
+            const ctx = document.getElementById('donationTypeChart').getContext('2d');
+            
+            if (donationChart) {
+                donationChart.destroy();
+            }
+            
+            donationChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [t('repStatBloodDonations'), t('repStatMarrowDonations')],
+                    datasets: [{
+                        data: [data.bloodDonations || 0, data.boneMarrowDonations || 0],
+                        backgroundColor: ['#f5576c', '#4facfe'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateInventoryChart(data) {
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            
+            if (inventoryChart) {
+                inventoryChart.destroy();
+            }
+            
+            const labels = Object.keys(data).sort();
+            const values = labels.map(key => data[key]);
+            
+            inventoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: t('repChartInventorySeries'),
+                        data: values,
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showToast(type, message) {
+            const bgColor = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            setTimeout(() => $('.toast').last().remove(), 3000);
+        }
+    </script>
+</body>
+</html>
+

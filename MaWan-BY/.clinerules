@@ -1,0 +1,21 @@
+# Roo Code 省 Token 核心规则 (Windows + Java 版)
+
+# 1. 环境与基础技能 (Environment & Tools)
+- 你正在 Windows 环境下工作，默认使用 PowerShell。
+- 必须优先使用已安装的 `rg` (ripgrep) 进行文本搜索，使用 `fd` 查找文件。
+- 禁止使用递归的 `ls -R` 或 `dir /s`，这会产生大量无用输出。
+
+# 2. 极致省钱读取策略 (Token Saving Strategy)
+- **先扫后读**：在未执行 `rg` 搜索定位前，严禁调用 `read_file` 读取超过 50 行的文件。
+- **精准切片**：如果文件很长，优先使用 `Get-Content <file> -TotalCount 50` 查看文件头。
+- **排除干扰**：搜索时必须排除以下目录：`target/`, `.idea/`, `.git/`, `node_modules/`。
+- **拒绝复读**：在修改代码时，严禁完整输出整个 Java 类。只允许输出修改部分的代码块（Context Diff）。
+
+# 3. Java 毕设专项优化 (Java Project Specifics)
+- **依赖查询**：如果需要确认依赖，直接执行 `rg "artifactId" pom.xml`，不要读取整个 pom 文件。
+- **Spring 逻辑查找**：查找接口时，优先搜索 `@RestController`, `@Service`, `@Mapper` 等注解定位文件。
+- **错误排查**：如果终端报错，先用 `rg` 搜索报错信息中的关键类名，不要盲目猜测。
+
+
+# 4. 自动思维 (Thinking Process)
+- 在执行任何写操作前，先在心里（或小声）通过 `list_files` 确认目录层级，确保代码写在正确的位置。

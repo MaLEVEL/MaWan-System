@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleLogin">登录 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h2 {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .alert {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="d-flex justify-content-end mb-2">
+            <div class="dropdown language-switcher">
+                <button class="btn btn-light btn-sm dropdown-toggle" id="loginLanguageDropdown"
+                    data-bs-toggle="dropdown">
+                    🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                    <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                    <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="login-header">
+            <h2 data-i18n="headingLogin">🩸 捐献管理系统</h2>
+            <p data-i18n="loginSubtitle">血液与骨髓捐献管理平台</p>
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="errorAlert" class="alert alert-danger d-none" role="alert">
+            <span id="errorMessage"></span>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label" data-i18n="labelUsername">用户名</label>
+                <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名"
+                    data-i18n-placeholder="loginPlaceholderUser" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label" data-i18n="labelPassword">密码</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码"
+                    data-i18n-placeholder="loginPlaceholderPassword" required>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="rememberMe">
+                <label class="form-check-label" for="rememberMe" data-i18n="labelRemember">记住我</label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-login w-100">
+                <span id="loginText" data-i18n="btnLogin">登录</span>
+                <span id="loginSpinner" class="spinner-border spinner-border-sm d-none" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </span>
+            </button>
+        </form>
+
+        <div class="text-center mt-3">
+            <small class="text-muted" data-i18n="loginDefaultHint">默认账户: admin / admin123</small>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script>
+        $(document).ready(function () {
+            // 检查是否已登录
+            const token = localStorage.getItem('token');
+            if (token) {
+                window.location.href = '/dashboard';
+            }
+
+            // 登录表单提交
+            $('#loginForm').on('submit', function (e) {
+                e.preventDefault();
+
+                const username = $('#username').val();
+                const password = $('#password').val();
+
+                // 显示加载状态
+                $('#loginText').addClass('d-none');
+                $('#loginSpinner').removeClass('d-none');
+                $('#errorAlert').addClass('d-none');
+
+                // 发送登录请求
+                $.ajax({
+                    url: '/api/auth/login',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        username: username,
+                        password: password
+                    }),
+                    success: function (response) {
+                        if (response.success && response.data && response.data.token) {
+                            localStorage.setItem('token', response.data.token);
+                            localStorage.setItem('username', username);
+                            document.cookie = `token=${response.data.token}; path=/; max-age=86400`;
+                            window.location.href = '/dashboard';
+                        } else {
+                            showError();
+                        }
+                    },
+                    error: function () {
+                        showError();
+                    },
+                    complete: function () {
+                        // 恢复按钮状态
+                        $('#loginText').removeClass('d-none');
+                        $('#loginSpinner').addClass('d-none');
+                    }
+                });
+            });
+
+            function showError() {
+                $('#errorMessage').text(window.t('loginErrorCredentials'));
+                $('#errorAlert').removeClass('d-none');
+            }
+        });
+    </script>
+</body>
+
+</html>

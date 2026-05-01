@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleUsers">用户管理 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown" data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/medical-checks" data-i18n="navMedicalChecks">🏥 体检记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donations" data-i18n="navDonations">💉 捐献记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/appointments" data-i18n="navAppointments">📅 预约管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/reports" data-i18n="navReports">📈 统计报表</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/users" data-i18n="navUsers">⚙️ 用户管理</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3 border-bottom">
+                    <h2 data-i18n="headingUsers">用户管理</h2>
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="page-toolbar">
+                        <div class="filter-grid">
+                            <div>
+                                <label for="usernameFilter" class="form-label visually-hidden" data-i18n="usrFilterPlaceholder">搜索用户名...</label>
+                                <input type="text" class="form-control" id="usernameFilter" placeholder="搜索用户名..."
+                                    data-i18n-placeholder="usrFilterPlaceholder">
+                            </div>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2" type="button" id="searchBtn">
+                                <span>🔍</span><span data-i18n="usrButtonSearch">搜索</span>
+                            </button>
+                            <button class="btn btn-primary add-record-btn d-flex align-items-center justify-content-center gap-2"
+                                data-bs-toggle="modal" data-bs-target="#userModal" onclick="openAddModal()">
+                                <span class="icon-dot">＋</span><span class="label" data-i18n="usrButtonAdd">添加用户</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="usrTableId">ID</th>
+                                    <th data-i18n="usrTableUsername">用户名</th>
+                                    <th data-i18n="usrTableFullName">姓名</th>
+                                    <th data-i18n="usrTableEmail">邮箱</th>
+                                    <th data-i18n="usrTableRoles">角色</th>
+                                    <th data-i18n="usrTableStatus">状态</th>
+                                    <th data-i18n="usrTableActions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <tr><td colspan="7" class="text-center" data-i18n="textLoading">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav>
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </nav>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加用户模态框 -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="usrModalTitle">添加用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-i18n-aria-label="labelClose"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="usrLabelUsername">用户名 *</label>
+                            <input type="text" class="form-control" id="username" required minlength="3" maxlength="50"
+                                data-i18n-placeholder="usrLabelUsername">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="usrLabelPassword">密码 *</label>
+                            <input type="password" class="form-control" id="password" required minlength="6"
+                                data-i18n-placeholder="usrLabelPassword">
+                            <div class="form-text" data-i18n="usrPasswordHint">密码至少6位字符</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="usrLabelFullName">姓名 *</label>
+                            <input type="text" class="form-control" id="fullName" required data-i18n-placeholder="usrLabelFullName">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="usrLabelEmail">邮箱</label>
+                            <input type="email" class="form-control" id="email" data-i18n-placeholder="usrLabelEmail">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="usrLabelRoles">角色 *</label>
+                            <div id="rolesGroup">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="ROLE_ADMIN" id="roleAdmin">
+                                    <label class="form-check-label" for="roleAdmin" data-i18n="usrRoleAdmin">管理员</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="ROLE_DOCTOR" id="roleDoctor">
+                                    <label class="form-check-label" for="roleDoctor" data-i18n="usrRoleDoctor">医生</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="ROLE_LAB_TECH" id="roleLabTech">
+                                    <label class="form-check-label" for="roleLabTech" data-i18n="usrRoleLabTech">实验室技术员</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="ROLE_REPORT_VIEWER" id="roleReportViewer">
+                                    <label class="form-check-label" for="roleReportViewer" data-i18n="usrRoleReportViewer">报表查看者</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()" data-i18n="labelSave">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script>
+        let currentPage = 0;
+        const pageSize = 10;
+
+        const ROLE_LABELS = {
+            ROLE_ADMIN: () => t('usrRoleAdmin'),
+            ROLE_DOCTOR: () => t('usrRoleDoctor'),
+            ROLE_LAB_TECH: () => t('usrRoleLabTech'),
+            ROLE_REPORT_VIEWER: () => t('usrRoleReportViewer')
+        };
+
+        $(document).ready(function() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+            
+            $('#currentUser').text(localStorage.getItem('username') || t('textUserPlaceholder'));
+            $('#logoutBtn').on('click', function(e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+            });
+            
+            $('.lang-option').on('click.users', () => setTimeout(loadUsers, 300));
+            loadUsers();
+            $('#searchBtn').on('click', function() { currentPage = 0; loadUsers(); });
+            $('#usernameFilter').on('keypress', function(e) { if(e.which === 13) { currentPage = 0; loadUsers(); } });
+        });
+
+        function loadUsers() {
+            const token = localStorage.getItem('token');
+            const username = $('#usernameFilter').val();
+            
+            let url = `/api/users?page=${currentPage}&size=${pageSize}`;
+            if (username) url += `&username=${encodeURIComponent(username)}`;
+            
+            $('#userTableBody').html(`<tr><td colspan="7" class="text-center">${t('textLoading')}</td></tr>`);
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        displayUsers(response.data.content || []);
+                        updatePagination(response.data.totalPages || 0);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('username');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (xhr.status === 403) {
+                        showToast('error', t('usrToastForbidden'));
+                    } else {
+                        showToast('error', t('usrToastLoadFailed'));
+                    }
+                    $('#userTableBody').html(`<tr><td colspan="7" class="text-center text-danger">${t('usrToastLoadFailed')}</td></tr>`);
+                }
+            });
+        }
+
+        function displayUsers(users) {
+            if (users.length === 0) {
+                $('#userTableBody').html(`<tr><td colspan="7" class="text-center text-muted">${t('textNoData')}</td></tr>`);
+                return;
+            }
+            
+            let html = '';
+            users.forEach(function(user) {
+                const roles = Array.isArray(user.roles) || user.roles instanceof Set
+                    ? Array.from(user.roles).map(getRoleLabel)
+                    : [];
+                const rolesText = roles.length ? roles.join(', ') : t('textUnknown');
+                const statusBadge = user.enabled !== false
+                    ? `<span class="badge bg-success">${t('usrStatusEnabled')}</span>`
+                    : `<span class="badge bg-danger">${t('usrStatusDisabled')}</span>`;
+                
+                html += `
+                    <tr>
+                        <td>${user.id ?? t('textUnknown')}</td>
+                        <td><strong>${user.username || t('textUnknown')}</strong></td>
+                        <td>${user.fullName || t('textUnknown')}</td>
+                        <td>${user.email || t('textUnknown')}</td>
+                        <td>${rolesText}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewUser(${user.id})" title="${t('usrActionView')}">👁️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            $('#userTableBody').html(html);
+        }
+
+        function getRoleLabel(role) {
+            return ROLE_LABELS[role]?.() || role || t('textUnknown');
+        }
+
+        function updatePagination(totalPages) {
+            let html = '';
+            for (let i = 0; i < totalPages; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadUsers();
+        }
+
+        function openAddModal() {
+            $('#userForm')[0].reset();
+            $('input[type="checkbox"]').prop('checked', false);
+        }
+
+        function viewUser(id) {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: `/api/users/${id}`,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        const user = response.data;
+                        const roles = Array.isArray(user.roles) || user.roles instanceof Set
+                            ? Array.from(user.roles).map(getRoleLabel)
+                            : [];
+                        const details = [
+                            `${t('usrDetailUsername')}: ${user.username || t('textUnknown')}`,
+                            `${t('usrDetailFullName')}: ${user.fullName || t('textUnknown')}`,
+                            `${t('usrDetailEmail')}: ${user.email || t('textUnknown')}`,
+                            `${t('usrDetailRoles')}: ${roles.length ? roles.join(', ') : t('textUnknown')}`,
+                            `${t('usrDetailStatus')}: ${user.enabled !== false ? t('usrStatusEnabled') : t('usrStatusDisabled')}`
+                        ].join('\n');
+                        alert(`${t('usrDetailTitle')}\n\n${details}`);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('username');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    showToast('error', t('usrToastDetailFailed'));
+                }
+            });
+        }
+
+        function saveUser() {
+            if (!$('#userForm')[0].checkValidity()) {
+                $('#userForm')[0].reportValidity();
+                return;
+            }
+            
+            const selectedRoles = [];
+            $('input[type="checkbox"]:checked').each(function() {
+                selectedRoles.push($(this).val());
+            });
+            
+            if (selectedRoles.length === 0) {
+                showToast('error', t('usrToastSelectRole'));
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            const data = {
+                username: $('#username').val(),
+                password: $('#password').val(),
+                fullName: $('#fullName').val(),
+                email: $('#email').val() || null,
+                roles: selectedRoles
+            };
+            
+            $.ajax({
+                url: '/api/auth/register',
+                method: 'POST',
+                headers: { 
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function() {
+                    $('#userModal').modal('hide');
+                    loadUsers();
+                    showToast('success', t('usrToastCreateSuccess'));
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('username');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    let errorMsg = t('usrToastCreateFailed');
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    } else if (xhr.status === 403) {
+                        errorMsg = t('usrToastForbidden');
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+        
+        function showToast(type, message) {
+            const bgColor = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            setTimeout(() => $('.toast').last().remove(), 3000);
+        }
+    </script>
+</body>
+</html>
+

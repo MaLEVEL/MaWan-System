@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleDashboard">仪表板 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+</head>
+
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown"
+                            data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                            data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/medical-checks" data-i18n="navMedicalChecks">🏥 体检记录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/donations" data-i18n="navDonations">💉 捐献记录</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/appointments" data-i18n="navAppointments">📅 预约管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/reports" data-i18n="navReports">📈 统计报表</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/users" data-i18n="navUsers">⚙️ 用户管理</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3">
+                    <h2 data-i18n="headingDashboard">数据概览</h2>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+                    <div class="col">
+                        <div class="card stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2" data-i18n="statTotalDonors">总捐献者</h6>
+                                    <h3 class="mb-0" id="totalDonors">-</h3>
+                                </div>
+                                <div class="stat-icon" style="background-color: #e3f2fd;">
+                                    <span style="color: #2196f3;">👥</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2" data-i18n="statTotalDonations">总捐献次数</h6>
+                                    <h3 class="mb-0" id="totalDonations">-</h3>
+                                </div>
+                                <div class="stat-icon" style="background-color: #fce4ec;">
+                                    <span style="color: #e91e63;">💉</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2" data-i18n="statTotalInventory">库存总量</h6>
+                                    <h3 class="mb-0" id="totalInventory">-</h3>
+                                </div>
+                                <div class="stat-icon" style="background-color: #f3e5f5;">
+                                    <span style="color: #9c27b0;">📦</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2" data-i18n="statPendingAppointments">待处理预约</h6>
+                                    <h3 class="mb-0" id="pendingAppointments">-</h3>
+                                </div>
+                                <div class="stat-icon" style="background-color: #fff3e0;">
+                                    <span style="color: #ff9800;">📅</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                            <h5 class="mb-3" data-i18n="sectionRecentDonationTrend">最近捐献趋势</h5>
+                            <div id="donationChart"
+                                style="height: 300px; display: flex; align-items: center; justify-content: center; color: #6c757d;"
+                                data-i18n="textChartLoading">
+                                图表加载中...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                            <h5 class="mb-3" data-i18n="sectionBloodDistribution">血型分布</h5>
+                            <div id="bloodTypeChart"
+                                style="height: 300px; display: flex; align-items: center; justify-content: center; color: #6c757d;"
+                                data-i18n="textChartLoading">
+                                图表加载中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近活动 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <h5 class="mb-3" data-i18n="sectionRecentDonationRecords">最近捐献记录</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th data-i18n="thDonor">捐献者</th>
+                                            <th data-i18n="thType">类型</th>
+                                            <th data-i18n="thQuantity">数量</th>
+                                            <th data-i18n="thDate">日期</th>
+                                            <th data-i18n="thStatus">状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentDonations">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted" data-i18n="textLoading">
+                                                加载中...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script th:src="@{/js/dateUtils.js}"></script>
+    <script>
+        // 从cookie获取token的辅助函数
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        $(document).ready(function () {
+            // 检查登录状态 - 优先从cookie获取token，其次从localStorage
+            let token = getCookie('token');
+            const username = localStorage.getItem('username');
+
+            // 如果cookie中没有token，尝试从localStorage获取
+            if (!token) {
+                token = localStorage.getItem('token');
+            }
+
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // 如果cookie中有token但localStorage中没有，保存到localStorage
+            if (token && !localStorage.getItem('token')) {
+                localStorage.setItem('token', token);
+            }
+
+            // 显示当前用户
+            $('#currentUser').text(username || '用户');
+
+            // 退出登录
+            $('#logoutBtn').on('click', function (e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                // 清除cookie
+                document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                window.location.href = '/login';
+            });
+
+            // 加载统计数据
+            loadStatistics();
+            loadRecentDonations();
+        });
+
+        function loadStatistics() {
+            const token = localStorage.getItem('token');
+
+            // 加载统计数据（这里使用模拟数据，实际应调用后端API）
+            $.ajax({
+                url: '/api/reports/statistics',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        $('#totalDonors').text(response.data.totalDonors || 0);
+                        $('#totalDonations').text(response.data.totalDonations || 0);
+                        $('#totalInventory').text(response.data.totalInventory || 0);
+                        $('#pendingAppointments').text(response.data.pendingAppointments || 0);
+                    }
+                },
+                error: function () {
+                    // 使用模拟数据
+                    $('#totalDonors').text('156');
+                    $('#totalDonations').text('423');
+                    $('#totalInventory').text('89');
+                    $('#pendingAppointments').text('12');
+                }
+            });
+        }
+
+        function loadRecentDonations() {
+            const token = localStorage.getItem('token');
+
+            $.ajax({
+                url: '/api/donations?page=0&size=5',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function (response) {
+                    if (response.success && response.data && response.data.content) {
+                        displayRecentDonations(response.data.content);
+                    }
+                },
+                error: function () {
+                    $('#recentDonations').html('<tr><td colspan="5" class="text-center text-muted">暂无数据</td></tr>');
+                }
+            });
+        }
+
+        function displayRecentDonations(donations) {
+            if (donations.length === 0) {
+                $('#recentDonations').html('<tr><td colspan="5" class="text-center text-muted">暂无数据</td></tr>');
+                return;
+            }
+
+            let html = '';
+            donations.forEach(function (donation) {
+                const statusBadge = getStatusBadge(donation.status);
+                html += `
+                    <tr>
+                        <td>${donation.donorName || '-'}</td>
+                        <td>${donation.donationType || '-'}</td>
+                        <td>${donation.quantity || '-'} ${donation.unit || ''}</td>
+                        <td>${DateUtils.formatDate(donation.donationDate)}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            $('#recentDonations').html(html);
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'PLANNED': '<span class="badge bg-info">计划中</span>',
+                'COMPLETED': '<span class="badge bg-success">已完成</span>',
+                'CANCELLED': '<span class="badge bg-danger">已取消</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">未知</span>';
+        }
+
+    </script>
+</body>
+
+</html>

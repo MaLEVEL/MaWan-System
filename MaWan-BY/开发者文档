@@ -1,0 +1,822 @@
+基于 Java + Spring 的血液与骨髓捐献管理系统
+后端开发说明文档（面向智能体）
+
+一、项目概述
+本项目旨在构建一个用于血液和骨髓捐献业务管理的后端信息系统，包括捐献者管理、捐献记录、体检与化验、库存管理、预约管理以及统计报表等功能模块。
+本说明文档面向“能够自动生成代码的智能体”，要求智能体使用 Java 17 与 Spring Boot 3.x，基于 MySQL 数据库，实现一个可直接部署的后端 REST API 服务。
+二、技术栈与总体要求
+1. 基本技术选型
+- 编程语言：Java 17
+- 框架：Spring Boot 3.x
+- 持久化：Spring Data JPA + Hibernate
+- 数据库：MySQL 8.x，字符集 utf8mb4
+- 安全认证：Spring Security + JWT
+- 接口文档：springdoc-openapi + Swagger UI
+- 构建工具：Maven，打包为可执行 JAR
+
+2. Maven 组织信息
+- GroupId：com.example
+- ArtifactId：donor-management
+- 基础包名：com.example.donormanagement
+
+3. 代码分层与包结构（智能体必须按此组织代码）
+- com.example.donormanagement
+- config        —— 全局配置（安全、CORS、OpenAPI 等）
+- controller    —— REST 控制器（对外 API）
+- dto           —— 请求与响应 DTO
+- entity        —— JPA 实体类
+- repository    —— Spring Data JPA 仓库接口
+- service       —— 业务逻辑接口及实现
+- mapper        —— DTO 与 Entity 映射工具
+- exception     —— 自定义异常与全局异常处理
+- security      —— JWT 及 Spring Security 相关类
+- util          —— 工具类（如日期工具等，按需）
+
+4. 通用编码规范
+- Controller 仅负责参数接收和结果返回，不直接编写业务逻辑。
+- Service 封装业务逻辑，Repository 仅用于数据访问。
+- 所有输入 DTO 使用 Jakarta Validation 注解进行参数校验。
+- 所有 API 返回统一响应结构：
+{
+"success": true/false,
+"data": { ... },
+"error": { "code": "...", "message": "..." },
+"timestamp": "ISO-8601 时间"
+}
+- 编写必要的单元测试和集成测试，保证主要业务流程可用。
+三、系统角色与权限设计
+智能体需要在系统中实现以下角色及基于角色的接口访问控制：
+1. ADMIN（系统管理员）
+- 管理用户账户与角色。
+- 管理系统基础字典（血型、科室等）。
+- 查看各类统计报表。
+
+2. DOCTOR（医生）
+- 查看并维护捐献者的医疗信息。
+- 审核捐献资格。
+- 查看捐献记录。
+
+3. LAB_TECH（检验人员）
+- 录入并查看体检与化验结果。
+- 维护血液与骨髓制品的库存状态。
+
+4. REGISTRAR（登记/接待）
+- 注册新的捐献者。
+- 为捐献者创建预约。
+- 录入捐献事件的基本信息。
+
+5. REPORT_VIEWER（报表查看，仅读，可选）
+- 只读查看统计报表和汇总信息。
+四、领域模型与数据库设计（实体说明）
+智能体必须使用 JPA 注解为以下实体建模，并在数据库中创建对应表结构与关联。
+
+1. 用户与权限
+1.1 User
+- Long id
+- String username（唯一，非空）
+- String passwordHash
+- String fullName
+- String email
+- Boolean enabled
+- Set<Role> roles  —— 多对多关联
+
+1.2 Role
+- Long id
+- String name（例如：ROLE_ADMIN、ROLE_DOCTOR 等）
+- String description
+
+要求：
+- 实现与 Spring Security 兼容的 UserDetails、UserDetailsService。
+- 使用 BCryptPasswordEncoder 加密存储密码。
+
+2. 捐献者与体检
+2.1 Donor
+- Long id
+- String firstName
+- String lastName
+- LocalDate dateOfBirth
+- String gender（可使用枚举：MALE/FEMALE/OTHER）
+- String passportNumber（或身份证号，唯一）
+- String phone
+- String email
+- String address
+- String bloodGroup（A/B/AB/O，枚举）
+- String rhesusFactor（POSITIVE/NEGATIVE，枚举）
+- String hlaType（骨髓配型信息，简化为字符串）
+- Boolean active（逻辑删除标志）
+- List<Donation> donations（一对多）
+- List<MedicalCheck> medicalChecks（一对多）
+
+2.2 MedicalCheck
+- Long id
+- Donor donor（多对一）
+- LocalDateTime checkDate
+- Double hemoglobin
+- Integer systolicPressure
+- Integer diastolicPressure
+- String conclusion（例如：FIT / UNFIT / NEEDS_RECHECK）
+
+3. 捐献记录与预约
+3.1 Donation
+- Long id
+- Donor donor
+- DonationType type（枚举：BLOOD, BONE_MARROW）
+- LocalDateTime plannedAt
+- LocalDateTime performedAt
+- DonationStatus status（PLANNED, COMPLETED, CANCELLED, REJECTED）
+- Double volumeMl（血液毫升数，可空）
+- String notes
+- MedicalCheck preCheck（可选，多对一）
+- List<InventoryItem> inventoryItems（一对多，表示由本次捐献产生的库存条目）
+
+3.2 Appointment
+- Long id
+- Donor donor
+- AppointmentType type（BLOOD, BONE_MARROW）
+- LocalDateTime startTime
+- LocalDateTime endTime
+- AppointmentStatus status（PLANNED, CONFIRMED, CANCELLED, NO_SHOW）
+- String location
+- String doctorName（可简化为字符串字段）
+
+4. 库存与制品
+4.1 InventoryItem
+- Long id
+- InventoryType type（WHOLE_BLOOD, PLASMA, PLATELETS, BONE_MARROW_SAMPLE 等）
+- Donation donation（多对一）
+- String bloodGroup
+- String rhesusFactor
+- LocalDate collectedAt
+- LocalDate expiryDate
+- InventoryStatus status（IN_STOCK, RESERVED, USED, EXPIRED, DISCARDED）
+- String storageLocation
+- String comment
+五、REST API 设计
+所有 REST 接口统一以 /api 为前缀，返回统一响应结构。智能体要为每个模块创建独立 Controller。
+
+1. 认证与用户管理（AuthController, UserController）
+1.1 POST /api/auth/login
+- 请求体：LoginRequest { String username; String password; }
+- 响应体：LoginResponse { String token; String username; List<String> roles; }
+- 功能：校验账号密码并签发 JWT。
+
+1.2 POST /api/auth/register（仅 ADMIN）
+- 创建新的内部系统用户（如 DOCTOR、LAB_TECH 等）。
+- 请求体包含用户名、初始密码、角色列表等。
+
+1.3 GET /api/users/me
+- 返回当前登录用户的信息。
+
+1.4 GET /api/users
+- 仅 ADMIN 可用，分页查询系统用户列表，可按 username 过滤。
+
+2. 捐献者管理（DonorController）
+2.1 POST /api/donors
+- 创建捐献者。
+- 请求 DTO：CreateDonorRequest。
+- 校验：姓名、证件号、出生日期、血型、联系方式等。
+
+2.2 GET /api/donors/{id}
+- 获取单个捐献者信息，可包含最近几次捐献和体检摘要。
+
+2.3 PUT /api/donors/{id}
+- 更新捐献者信息。
+
+2.4 DELETE /api/donors/{id}
+- 逻辑删除，将 Donor.active 置为 false。
+
+2.5 GET /api/donors
+- 分页条件查询：
+- 可按 name, passportNumber, bloodGroup, rhesusFactor 查询。
+- 支持 page, size, sort 参数。
+
+3. 捐献记录管理（DonationController）
+3.1 POST /api/donations
+- 创建捐献记录。
+- 请求体包含：donorId, type, plannedAt, volumeMl, preCheckId 等。
+
+3.2 PUT /api/donations/{id}/complete
+- 标记捐献为 COMPLETED，设置 performedAt 与最终体积等。
+
+3.3 PUT /api/donations/{id}/cancel
+- 将捐献状态设为 CANCELLED，记录取消原因。
+
+3.4 GET /api/donations/{id}
+- 查看单条捐献记录详情。
+
+3.5 GET /api/donations
+- 条件分页查询：
+- donorId, type, status, fromDate, toDate 等。
+
+4. 体检与化验管理（MedicalCheckController）
+4.1 POST /api/medical-checks
+- 创建体检记录，关联 donorId。
+
+4.2 GET /api/medical-checks/{id}
+- 获取单条体检记录详情。
+
+4.3 GET /api/medical-checks
+- 条件查询：donorId, fromDate, toDate。
+
+5. 库存管理（InventoryController）
+5.1 POST /api/inventory
+- 为已完成捐献创建库存条目。
+
+5.2 PATCH /api/inventory/{id}/status
+- 更新库存状态，例如从 IN_STOCK 改为 USED 或 DISCARDED。
+
+5.3 GET /api/inventory/{id}
+- 查询单条库存条目详情。
+
+5.4 GET /api/inventory
+- 条件查询参数：
+- bloodGroup, rhesusFactor, type, status, willExpireBefore 等。
+
+6. 预约管理（AppointmentController）
+6.1 POST /api/appointments
+- 为捐献者创建预约，指定时间段、类型和地点。
+
+6.2 PUT /api/appointments/{id}
+- 修改预约信息或状态。
+
+6.3 GET /api/appointments/{id}
+- 查询单条预约详情。
+
+6.4 GET /api/appointments
+- 条件查询：donorId, from, to, status。
+
+7. 报表统计（ReportController）
+7.1 GET /api/reports/donations/summary
+- 参数：fromDate, toDate。
+- 返回：按类型（血液/骨髓）统计捐献次数和总量。
+
+7.2 GET /api/reports/inventory/by-blood-group
+- 返回：按血型和 Rh 因子统计当前库存数量。
+六、安全设计（Spring Security + JWT）
+智能体必须实现完整的基于 JWT 的无状态认证与授权机制：
+
+1. 实现内容
+- JwtTokenProvider：生成、解析和验证 JWT。
+- JwtAuthenticationFilter：从 Authorization 头中解析 Bearer Token。
+- CustomUserDetailsService：从数据库加载用户信息和角色。
+- SecurityConfig：配置 HttpSecurity，设置访问规则和密码加密器。
+
+2. 安全规则
+- 公开端点：/api/auth/**。
+- 需要认证端点：其余所有 /api/**。
+- 只有 ADMIN 可以访问：/api/users/**。
+- ADMIN 和 REPORT_VIEWER 可以访问：/api/reports/**。
+- 其他端点根据角色再细分（例如只有 LAB_TECH 可以新增体检检验数据，只有 DOCTOR 可以修改体检结论，REGISTRAR 负责创建捐献者和预约等）。
+
+七、DTO 与数据校验
+智能体需要为每个模块定义清晰的请求/响应 DTO，并使用 Jakarta Validation 注解对字段进行约束。示例：
+- CreateDonorRequest, UpdateDonorRequest, DonorResponse。
+- CreateDonationRequest, DonationResponse。
+- CreateAppointmentRequest, AppointmentResponse。
+- CreateInventoryItemRequest, InventoryItemResponse。
+- LoginRequest, LoginResponse 等。
+
+常用校验注解：
+- @NotNull, @NotBlank, @Email, @Past, @Pattern, @Size 等。
+
+建议实现统一的 Mapper：
+- DonorMapper, DonationMapper, InventoryMapper, AppointmentMapper 等。
+可通过 MapStruct 或手写转换方法实现 Entity 与 DTO 之间的映射。
+
+八、异常处理与日志
+1. 全局异常处理
+- 创建 GlobalExceptionHandler（使用 @RestControllerAdvice）。
+- 捕获：
+- 参数校验异常（MethodArgumentNotValidException）。
+- 资源不存在异常（如 DonorNotFoundException）。
+- 业务异常（如“不合格捐献者无法创建捐献记录”）。
+- 统一包装为约定的响应结构，并返回合适的 HTTP 状态码。
+
+2. 日志记录
+- 在 Service 层使用日志记录关键操作，如：
+- 新增捐献者。
+- 创建和完成捐献记录。
+- 更改库存状态。
+- 用户登录失败/成功等。
+
+九、测试要求
+1. 单元测试（JUnit 5 + Mockito）
+- 对核心 Service（如 DonorService, DonationService, InventoryService 等）进行单元测试。
+- 使用 Mock Repository 层，验证业务逻辑是否正确。
+
+2. 集成测试（SpringBootTest + MockMvc）
+- 启动嵌入式上下文，测试关键 API 调用链：
+- 注册/登录 -> 获取 JWT -> 使用 JWT 调用受保护接口。
+- 创建捐献者 -> 创建预约 -> 创建捐献记录 -> 生成库存条目。
+
+十、智能体实现顺序建议
+为方便智能体有序实现项目，建议遵循以下步骤：
+1. 创建 Maven 项目与基础 pom.xml，编写 Spring Boot 启动类。
+2. 配置 application.yml，完成数据源、JPA、端口等配置。
+3. 实现实体类（User, Role, Donor, MedicalCheck, Donation, InventoryItem, Appointment）及 JPA 关联。
+4. 创建各实体的 Repository 接口。
+5. 编写 Service 接口与实现类，实现完整业务逻辑。
+6. 定义 DTO 与 Mapper，实现 Entity 与 DTO 的双向转换。
+7. 实现 Spring Security + JWT 的认证授权机制。
+8. 编写 Controller，实现所有 REST 接口与统一响应格式。
+9. 编写全局异常处理和日志记录。
+10. 编写单元测试与集成测试，保证主要业务流程能够顺利执行且无严重错误。
+
+十一、实体类详细说明（基于实际实现）
+
+1. User 实体
+- 表名：users
+- 字段说明：
+  * id: Long，主键，自增
+  * username: String(50)，唯一，非空，用于登录
+  * passwordHash: String(255)，非空，BCrypt加密后的密码
+  * fullName: String(100)，非空，用户全名
+  * email: String(100)，可选，邮箱地址
+  * enabled: Boolean，非空，默认true，账户是否启用
+  * roles: Set<Role>，多对多关联，通过user_roles中间表关联
+
+2. Role 实体
+- 表名：roles
+- 字段说明：
+  * id: Long，主键，自增
+  * name: String(50)，唯一，非空，角色名称（如ROLE_ADMIN、ROLE_DOCTOR等）
+  * description: String(255)，可选，角色描述
+
+3. Donor 实体
+- 表名：donors
+- 字段说明：
+  * id: Long，主键，自增
+  * firstName: String(50)，非空，名
+  * lastName: String(50)，非空，姓
+  * dateOfBirth: LocalDate，非空，出生日期
+  * gender: Gender枚举，非空，MALE/FEMALE/OTHER
+  * passportNumber: String(50)，唯一，非空，证件号
+  * phone: String(20)，可选，联系电话
+  * email: String(100)，可选，邮箱
+  * address: String(255)，可选，地址
+  * bloodGroup: BloodGroup枚举，非空，A/B/AB/O
+  * rhesusFactor: RhesusFactor枚举，非空，POSITIVE/NEGATIVE
+  * hlaType: String(100)，可选，HLA配型信息
+  * active: Boolean，非空，默认true，逻辑删除标志
+  * donations: List<Donation>，一对多，该捐献者的所有捐献记录
+  * medicalChecks: List<MedicalCheck>，一对多，该捐献者的所有体检记录
+
+4. MedicalCheck 实体
+- 表名：medical_checks
+- 字段说明：
+  * id: Long，主键，自增
+  * donor: Donor，多对一，关联捐献者
+  * checkDate: LocalDateTime，非空，体检日期时间
+  * hemoglobin: Double，可选，血红蛋白值（g/L）
+  * systolicPressure: Integer，可选，收缩压（mmHg）
+  * diastolicPressure: Integer，可选，舒张压（mmHg）
+  * conclusion: Conclusion枚举，非空，FIT/UNFIT/NEEDS_RECHECK
+
+5. Donation 实体
+- 表名：donations
+- 字段说明：
+  * id: Long，主键，自增
+  * donor: Donor，多对一，关联捐献者
+  * type: DonationType枚举，非空，BLOOD/BONE_MARROW
+  * plannedAt: LocalDateTime，非空，计划捐献时间
+  * performedAt: LocalDateTime，可选，实际捐献时间
+  * status: DonationStatus枚举，非空，PLANNED/COMPLETED/CANCELLED/REJECTED
+  * volumeMl: Double，可选，捐献体积（毫升）
+  * notes: String(500)，可选，备注信息
+  * preCheck: MedicalCheck，多对一，可选，关联的体检记录
+  * inventoryItems: List<InventoryItem>，一对多，本次捐献产生的库存条目
+
+6. Appointment 实体
+- 表名：appointments
+- 字段说明：
+  * id: Long，主键，自增
+  * donor: Donor，多对一，关联捐献者
+  * type: AppointmentType枚举，非空，BLOOD/BONE_MARROW
+  * startTime: LocalDateTime，非空，预约开始时间
+  * endTime: LocalDateTime，非空，预约结束时间
+  * status: AppointmentStatus枚举，非空，PLANNED/CONFIRMED/CANCELLED/NO_SHOW
+  * location: String(100)，可选，预约地点
+  * doctorName: String(100)，可选，医生姓名
+
+7. InventoryItem 实体
+- 表名：inventory_items
+- 字段说明：
+  * id: Long，主键，自增
+  * type: InventoryType枚举，非空，WHOLE_BLOOD/PLASMA/PLATELETS/BONE_MARROW_SAMPLE
+  * donation: Donation，多对一，关联捐献记录
+  * bloodGroup: String(5)，非空，血型
+  * rhesusFactor: String(10)，非空，Rh因子
+  * collectedAt: LocalDate，非空，采集日期
+  * expiryDate: LocalDate，非空，过期日期
+  * status: InventoryStatus枚举，非空，IN_STOCK/RESERVED/USED/EXPIRED/DISCARDED
+  * storageLocation: String(100)，可选，存储位置
+  * comment: String(500)，可选，备注
+
+十二、DTO 详细说明
+
+所有DTO类位于com.example.donormanagement.dto包下，使用Lombok简化代码。
+
+1. 通用DTO
+- ApiResponse<T>：统一API响应包装类
+  * success: Boolean，操作是否成功
+  * data: T，响应数据（成功时）
+  * error: ErrorInfo，错误信息（失败时）
+  * timestamp: LocalDateTime，响应时间戳
+  * 静态方法：success(T data)、error(String code, String message)
+
+2. 认证相关DTO
+- LoginRequest：登录请求
+  * username: String，用户名（@NotBlank）
+  * password: String，密码（@NotBlank）
+- LoginResponse：登录响应
+  * token: String，JWT令牌
+  * username: String，用户名
+  * roles: List<String>，用户角色列表
+- CreateUserRequest：创建用户请求（仅ADMIN）
+  * username: String，用户名（@NotBlank）
+  * password: String，密码（@NotBlank，@Size(min=6)）
+  * fullName: String，全名（@NotBlank）
+  * email: String，邮箱（@Email）
+  * roleNames: List<String>，角色名称列表
+
+3. 捐献者相关DTO
+- CreateDonorRequest：创建捐献者请求
+  * firstName, lastName, dateOfBirth, gender, passportNumber等必填字段
+  * phone, email, address, hlaType等可选字段
+- UpdateDonorRequest：更新捐献者请求
+  * 字段与CreateDonorRequest类似，但所有字段可选
+- DonorResponse：捐献者响应
+  * 包含所有捐献者信息字段
+  * 可包含最近几次捐献和体检的摘要信息
+
+4. 捐献记录相关DTO
+- CreateDonationRequest：创建捐献记录请求
+  * donorId: Long，捐献者ID（@NotNull）
+  * type: DonationType，捐献类型（@NotNull）
+  * plannedAt: LocalDateTime，计划时间（@NotNull）
+  * volumeMl: Double，计划体积
+  * notes: String，备注
+  * preCheckId: Long，关联体检记录ID（可选）
+- CompleteDonationRequest：完成捐献请求
+  * performedAt: LocalDateTime，实际捐献时间
+  * volumeMl: Double，实际体积
+  * notes: String，备注
+- CancelDonationRequest：取消捐献请求
+  * reason: String，取消原因
+- DonationResponse：捐献记录响应
+  * 包含所有捐献记录信息
+  * 包含捐献者基本信息
+  * 包含关联的体检记录信息（如有）
+
+5. 体检相关DTO
+- CreateMedicalCheckRequest：创建体检记录请求
+  * donorId: Long，捐献者ID（@NotNull）
+  * checkDate: LocalDateTime，体检日期（@NotNull）
+  * hemoglobin: Double，血红蛋白值
+  * systolicPressure: Integer，收缩压
+  * diastolicPressure: Integer，舒张压
+  * conclusion: Conclusion，结论（@NotNull）
+- MedicalCheckResponse：体检记录响应
+  * 包含所有体检信息
+  * 包含捐献者基本信息
+
+6. 预约相关DTO
+- CreateAppointmentRequest：创建预约请求
+  * donorId: Long，捐献者ID（@NotNull）
+  * type: AppointmentType，预约类型（@NotNull）
+  * startTime: LocalDateTime，开始时间（@NotNull）
+  * endTime: LocalDateTime，结束时间（@NotNull）
+  * location: String，地点
+  * doctorName: String，医生姓名
+- UpdateAppointmentRequest：更新预约请求
+  * 所有字段可选，用于部分更新
+- AppointmentResponse：预约响应
+  * 包含所有预约信息
+  * 包含捐献者基本信息
+
+7. 库存相关DTO
+- CreateInventoryItemRequest：创建库存条目请求
+  * donationId: Long，捐献记录ID（@NotNull）
+  * type: InventoryType，库存类型（@NotNull）
+  * bloodGroup: String，血型（@NotBlank）
+  * rhesusFactor: String，Rh因子（@NotBlank）
+  * collectedAt: LocalDate，采集日期（@NotNull）
+  * expiryDate: LocalDate，过期日期（@NotNull）
+  * storageLocation: String，存储位置
+  * comment: String，备注
+- UpdateInventoryStatusRequest：更新库存状态请求
+  * status: InventoryStatus，新状态（@NotNull）
+  * comment: String，备注
+- InventoryItemResponse：库存条目响应
+  * 包含所有库存信息
+  * 包含关联的捐献记录信息
+
+十三、配置文件说明（application.yml）
+
+1. 数据源配置
+- 数据库URL：jdbc:mysql://localhost:3306/donor_management
+- 字符编码：UTF-8
+- 时区：Asia/Shanghai
+- 用户名/密码：根据实际环境配置
+
+2. JPA配置
+- ddl-auto: update（开发环境），生产环境建议使用validate或none
+- show-sql: true（开发环境），生产环境设为false
+- format_sql: true，格式化SQL输出
+- open-in-view: false，避免性能问题
+
+3. JWT配置
+- secret: JWT签名密钥，生产环境必须使用强密钥
+- expiration: 86400000（24小时），令牌过期时间（毫秒）
+
+4. Swagger/OpenAPI配置
+- api-docs路径：/api-docs
+- swagger-ui路径：/swagger-ui.html
+- 生产环境建议禁用或添加访问控制
+
+5. 日志配置
+- 开发环境：DEBUG级别
+- 生产环境：INFO或WARN级别
+
+十四、数据库初始化
+
+1. 数据库创建
+```sql
+CREATE DATABASE donor_management 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+```
+
+2. 初始数据（data.sql）
+系统启动时会自动执行src/main/resources/data.sql文件，用于初始化：
+- 系统角色（ROLE_ADMIN, ROLE_DOCTOR, ROLE_LAB_TECH, ROLE_REGISTRAR, ROLE_REPORT_VIEWER）
+- 默认管理员账户（username: admin, password: admin123）
+- 其他测试数据（可选）
+
+3. 数据迁移
+- 开发环境：使用JPA的ddl-auto=update自动创建/更新表结构
+- 生产环境：建议使用Flyway或Liquibase进行版本化数据库迁移
+
+十五、开发环境搭建
+
+1. 前置要求
+- JDK 17或更高版本
+- Maven 3.6+
+- MySQL 8.0+
+- IDE（推荐IntelliJ IDEA或Eclipse）
+
+2. 环境配置步骤
+1) 克隆或下载项目代码
+2) 创建MySQL数据库：
+   ```sql
+   CREATE DATABASE donor_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+3) 修改application.yml中的数据库连接信息
+4) 运行Maven命令编译项目：
+   ```bash
+   mvn clean compile
+   ```
+5) 启动应用：
+   ```bash
+   mvn spring-boot:run
+   ```
+   或直接运行DonorManagementApplication主类
+6) 访问Swagger UI：http://localhost:8081/swagger-ui.html
+
+3. IDE配置
+- 确保IDE启用Lombok插件
+- 配置注解处理器（Annotation Processing）
+- 设置项目JDK为17
+
+十六、API使用示例
+
+1. 用户登录
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+响应：
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzUxMiJ9...",
+    "username": "admin",
+    "roles": ["ROLE_ADMIN"]
+  },
+  "timestamp": "2024-01-01T12:00:00"
+}
+```
+
+2. 创建捐献者（需要认证）
+```bash
+POST /api/donors
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "firstName": "张",
+  "lastName": "三",
+  "dateOfBirth": "1990-01-01",
+  "gender": "MALE",
+  "passportNumber": "110101199001011234",
+  "phone": "13800138000",
+  "email": "zhangsan@example.com",
+  "bloodGroup": "A",
+  "rhesusFactor": "POSITIVE"
+}
+```
+
+3. 查询捐献者列表（分页）
+```bash
+GET /api/donors?page=0&size=10&sort=id,desc
+Authorization: Bearer {token}
+```
+
+4. 创建体检记录
+```bash
+POST /api/medical-checks
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "donorId": 1,
+  "checkDate": "2024-01-01T10:00:00",
+  "hemoglobin": 150.0,
+  "systolicPressure": 120,
+  "diastolicPressure": 80,
+  "conclusion": "FIT"
+}
+```
+
+5. 创建预约
+```bash
+POST /api/appointments
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "donorId": 1,
+  "type": "BLOOD",
+  "startTime": "2024-01-15T09:00:00",
+  "endTime": "2024-01-15T10:00:00",
+  "location": "献血中心A区",
+  "doctorName": "李医生"
+}
+```
+
+6. 创建捐献记录
+```bash
+POST /api/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "donorId": 1,
+  "type": "BLOOD",
+  "plannedAt": "2024-01-15T09:00:00",
+  "volumeMl": 400.0,
+  "preCheckId": 1
+}
+```
+
+7. 完成捐献
+```bash
+PUT /api/donations/1/complete
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "performedAt": "2024-01-15T09:30:00",
+  "volumeMl": 400.0,
+  "notes": "捐献顺利完成"
+}
+```
+
+8. 查询统计报表
+```bash
+GET /api/reports/donations/summary?fromDate=2024-01-01T00:00:00&toDate=2024-12-31T23:59:59
+Authorization: Bearer {token}
+```
+
+十七、部署说明
+
+1. 打包应用
+```bash
+mvn clean package
+```
+生成的可执行JAR位于target/donor-management-1.0.0.jar
+
+2. 生产环境配置
+- 修改application.yml中的数据库连接信息
+- 设置强JWT密钥（至少256位）
+- 关闭SQL日志输出（show-sql: false）
+- 调整日志级别为INFO或WARN
+- 配置CORS允许的前端域名
+- 考虑使用环境变量或外部配置文件管理敏感信息
+
+3. 运行应用
+```bash
+java -jar donor-management-1.0.0.jar
+```
+
+4. 使用systemd服务（Linux）
+创建/etc/systemd/system/donor-management.service：
+```ini
+[Unit]
+Description=Donor Management System
+After=network.target
+
+[Service]
+Type=simple
+User=donor
+ExecStart=/usr/bin/java -jar /opt/donor-management/donor-management-1.0.0.jar
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+5. Docker部署（可选）
+创建Dockerfile：
+```dockerfile
+FROM openjdk:17-jre-slim
+COPY target/donor-management-1.0.0.jar app.jar
+EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+十八、常见问题与解决方案
+
+1. Lombok注解不生效
+- 确保IDE安装了Lombok插件
+- 检查Maven编译器插件配置了annotationProcessorPaths
+- 重新编译项目：mvn clean compile
+
+2. JWT认证失败
+- 检查请求头格式：Authorization: Bearer {token}
+- 确认token未过期
+- 检查JWT密钥配置是否正确
+
+3. 数据库连接失败
+- 确认MySQL服务已启动
+- 检查数据库URL、用户名、密码配置
+- 确认数据库已创建且字符集为utf8mb4
+
+4. 跨域问题（CORS）
+- 检查SecurityConfig中的CORS配置
+- 确认前端请求的Origin在允许列表中
+
+5. 实体关联查询N+1问题
+- 使用@EntityGraph或JOIN FETCH优化查询
+- 合理使用LAZY和EAGER加载策略
+
+6. 日期时间格式问题
+- 确保application.yml中配置了正确的时区
+- 前端传递的日期时间格式应为ISO-8601
+
+十九、扩展开发建议
+
+1. 功能扩展
+- 添加短信/邮件通知功能
+- 实现捐献者健康档案管理
+- 添加库存预警功能
+- 实现数据导出功能（Excel、PDF）
+- 添加操作日志审计功能
+
+2. 性能优化
+- 使用Redis缓存热点数据
+- 实现数据库读写分离
+- 添加API限流功能
+- 优化复杂查询，添加数据库索引
+
+3. 安全增强
+- 实现密码强度策略
+- 添加登录失败次数限制
+- 实现操作日志记录
+- 定期更换JWT密钥
+
+4. 监控与运维
+- 集成Spring Boot Actuator
+- 添加健康检查端点
+- 集成日志收集系统（如ELK）
+- 配置应用性能监控（APM）
+
+二十、参考资源
+
+1. 官方文档
+- Spring Boot: https://spring.io/projects/spring-boot
+- Spring Security: https://spring.io/projects/spring-security
+- Spring Data JPA: https://spring.io/projects/spring-data-jpa
+- Lombok: https://projectlombok.org/
+
+2. 相关规范
+- RESTful API设计规范
+- JWT规范：RFC 7519
+- Jakarta Bean Validation规范
+
+本开发说明文档可直接交给代码生成型智能体，要求其严格按照上述规范与步骤，实现一个可运行的 Java + Spring Boot 后端系统。

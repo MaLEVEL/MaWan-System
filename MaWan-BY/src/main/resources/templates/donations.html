@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleDonations">捐献记录 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown"
+                            data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                            data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/medical-checks" data-i18n="navMedicalChecks">🏥
+                                体检记录</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/donations" data-i18n="navDonations">💉
+                                捐献记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/appointments" data-i18n="navAppointments">📅
+                                预约管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/reports" data-i18n="navReports">📈 统计报表</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/users" data-i18n="navUsers">⚙️ 用户管理</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3 border-bottom">
+                    <h2 data-i18n="headingDonations">捐献记录管理</h2>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="totalDonations">-</h3>
+                            <p data-i18n="donStatTotalRecords">总记录数</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h3 id="plannedDonations">-</h3>
+                            <p data-i18n="donStatPlanned">计划中</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h3 id="completedDonations">-</h3>
+                            <p data-i18n="donStatCompleted">已完成</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <h3 id="totalVolume">-</h3>
+                            <p data-i18n="donStatVolume">总捐献量(ml)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="page-toolbar">
+                        <div class="filter-grid">
+                            <div>
+                                <label for="donorIdFilter" class="form-label visually-hidden"
+                                    data-i18n="donFilterDonorPlaceholder">捐献者ID</label>
+                                <input type="number" class="form-control" id="donorIdFilter" placeholder="捐献者ID"
+                                    data-i18n-placeholder="donFilterDonorPlaceholder">
+                            </div>
+                            <div>
+                                <label for="typeFilter" class="form-label visually-hidden"
+                                    data-i18n="donFilterTypeLabel">类型筛选</label>
+                                <select class="form-select" id="typeFilter" aria-label="类型筛选"
+                                    data-i18n-aria-label="donFilterTypeLabel">
+                                    <option value="" data-i18n="donFilterTypeAll">全部类型</option>
+                                    <option value="BLOOD" data-i18n="donTypeBlood">血液</option>
+                                    <option value="BONE_MARROW" data-i18n="donTypeBoneMarrow">骨髓</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="statusFilter" class="form-label visually-hidden"
+                                    data-i18n="donFilterStatusLabel">状态筛选</label>
+                                <select class="form-select" id="statusFilter" aria-label="状态筛选"
+                                    data-i18n-aria-label="donFilterStatusLabel">
+                                    <option value="" data-i18n="donFilterStatusAll">全部状态</option>
+                                    <option value="PLANNED" data-i18n="donStatusPlanned">计划中</option>
+                                    <option value="COMPLETED" data-i18n="donStatusCompleted">已完成</option>
+                                    <option value="CANCELLED" data-i18n="donStatusCancelled">已取消</option>
+                                    <option value="REJECTED" data-i18n="donStatusRejected">已拒绝</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="fromDate" class="form-label visually-hidden"
+                                    data-i18n="donFilterFromDate">开始日期</label>
+                                <input type="date" class="form-control" id="fromDate" placeholder="开始日期"
+                                    data-i18n-placeholder="donFilterFromDate">
+                            </div>
+                            <div>
+                                <label for="toDate" class="form-label visually-hidden"
+                                    data-i18n="donFilterToDate">结束日期</label>
+                                <input type="date" class="form-control" id="toDate" placeholder="结束日期"
+                                    data-i18n-placeholder="donFilterToDate">
+                            </div>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-outline-primary" type="button" id="searchBtn" title="搜索"
+                                data-i18n-title="donButtonSearch">
+                                <span class="me-1">🔍</span><span data-i18n="donButtonSearch">搜索</span>
+                            </button>
+                            <button class="btn btn-ghost" type="button" onclick="resetFilters()" title="重置"
+                                data-i18n-title="donButtonReset">
+                                <span class="me-1">🔄</span><span data-i18n="donButtonReset">重置</span>
+                            </button>
+                            <button class="btn btn-primary add-record-btn" data-bs-toggle="modal"
+                                data-bs-target="#donationModal" onclick="openAddModal()">
+                                <span class="icon-dot">＋</span>
+                                <span class="label" data-i18n="donButtonAdd">添加捐献记录</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="donTableId">ID</th>
+                                    <th data-i18n="donTableDonor">捐献者</th>
+                                    <th data-i18n="donTableType">类型</th>
+                                    <th data-i18n="donTablePlannedAt">计划时间</th>
+                                    <th data-i18n="donTableCompletedAt">完成时间</th>
+                                    <th data-i18n="donTableVolume">体积(ml)</th>
+                                    <th data-i18n="donTableStatus">状态</th>
+                                    <th data-i18n="donTableActions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="donationTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center" data-i18n="textLoading">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav>
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </nav>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加捐献记录模态框 -->
+    <div class="modal fade" id="donationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="donationModalLabel" data-i18n="donModalTitleAdd">添加捐献记录</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        data-i18n-aria-label="labelClose"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="donationForm">
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalLabelDonor">捐献者 *</label>
+                            <div class="input-group">
+                                <select class="form-select" id="donorSelect" onchange="updateDonorId()">
+                                    <option value="" data-i18n="donModalSelectPlaceholder">请选择捐献者...</option>
+                                </select>
+                                <input type="number" class="form-control" id="donorId" placeholder="或输入ID"
+                                    style="display:none;" data-i18n-placeholder="donModalInputId">
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleDonorInput()"
+                                    id="toggleDonorBtn" data-i18n="donModalToggleInput">输入ID</button>
+                            </div>
+                            <div class="form-text" data-i18n="donModalDonorHint">选择捐献者或直接输入ID</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalType">捐献类型 *</label>
+                            <select class="form-select" id="type" required>
+                                <option value="" data-i18n="optionPleaseSelect">请选择</option>
+                                <option value="BLOOD" data-i18n="donTypeBlood">血液</option>
+                                <option value="BONE_MARROW" data-i18n="donTypeBoneMarrow">骨髓</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalPlannedAt">计划时间 *</label>
+                            <input type="datetime-local" class="form-control" id="plannedAt" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalVolume">预计体积(ml)</label>
+                            <input type="number" step="0.1" class="form-control" id="volumeMl" min="0" placeholder="可选"
+                                data-i18n-placeholder="donModalVolume">
+                            <div class="form-text" data-i18n="donModalVolumeHint">血液捐献通常为200-400ml，骨髓捐献可不填</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalPreCheck">体检记录ID(可选)</label>
+                            <input type="number" class="form-control" id="preCheckId" placeholder="关联的体检记录ID"
+                                data-i18n-placeholder="donModalPreCheck">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalNotes">备注</label>
+                            <textarea class="form-control" id="notes" rows="3" placeholder="其他备注信息"
+                                data-i18n-placeholder="donModalNotesPlaceholder"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDonation()"
+                        data-i18n="labelSave">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 完成捐献模态框 -->
+    <div class="modal fade" id="completeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="donCompleteTitle">完成捐献</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        data-i18n-aria-label="labelClose"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="completeForm">
+                        <input type="hidden" id="completeDonationId">
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donCompletePerformedAt">完成时间 *</label>
+                            <input type="datetime-local" class="form-control" id="performedAt" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donCompleteVolume">实际体积(ml) *</label>
+                            <input type="number" step="0.1" class="form-control" id="completeVolume" required min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donModalNotes">备注</label>
+                            <textarea class="form-control" id="completeNotes" rows="2"
+                                data-i18n-placeholder="donModalNotesPlaceholder"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-success" onclick="completeDonation()"
+                        data-i18n="donCompleteConfirm">完成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 取消捐献模态框 -->
+    <div class="modal fade" id="cancelModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="donCancelTitle">取消捐献</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        data-i18n-aria-label="labelClose"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="cancelForm">
+                        <input type="hidden" id="cancelDonationId">
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="donCancelReason">取消原因 *</label>
+                            <textarea class="form-control" id="reason" rows="3" required placeholder="请输入取消原因..."
+                                data-i18n-placeholder="donCancelReasonPlaceholder"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="cancelDonation()"
+                        data-i18n="donCancelConfirm">确认取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情查看模态框 -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="donDetailTitle">捐献记录详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        data-i18n-aria-label="labelClose"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailId">记录ID</strong>：
+                            <span id="detailId">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailDonor">捐献者</strong>：
+                            <span id="detailDonor">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailType">捐献类型</strong>：
+                            <span id="detailType">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailStatus">状态</strong>：
+                            <span id="detailStatus">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailPlannedAt">计划时间</strong>：
+                            <span id="detailPlannedAt">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailPerformedAt">完成时间</strong>：
+                            <span id="detailPerformedAt">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailVolume">体积(ml)</strong>：
+                            <span id="detailVolume">-</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong data-i18n="donDetailPreCheck">体检记录ID</strong>：
+                            <span id="detailPreCheckId">-</span>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <strong data-i18n="donDetailNotes">备注</strong>：
+                            <div id="detailNotes" class="mt-2 p-2 bg-light rounded">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="labelClose">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script th:src="@{/js/dateUtils.js}"></script>
+    <script>
+        let currentPage = 0;
+        const pageSize = 10;
+        let donorsList = [];
+
+        function getStatusBadge(status) {
+            const map = {
+                PLANNED: { cls: 'bg-info', label: t('donStatusPlanned') },
+                COMPLETED: { cls: 'bg-success', label: t('donStatusCompleted') },
+                CANCELLED: { cls: 'bg-secondary', label: t('donStatusCancelled') },
+                REJECTED: { cls: 'bg-danger', label: t('donStatusRejected') }
+            };
+            const cfg = map[status] || { cls: 'bg-light text-dark', label: status || t('textUnknown') };
+            return `<span class="badge ${cfg.cls}">${cfg.label}</span>`;
+        }
+
+        function getTypeLabel(type) {
+            if (type === 'BLOOD') return t('donTypeBlood');
+            if (type === 'BONE_MARROW') return t('donTypeBoneMarrow');
+            return type || t('textUnknown');
+        }
+
+        $(document).ready(function () {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+
+            $('#currentUser').text(localStorage.getItem('username') || t('textUserPlaceholder'));
+            $('#logoutBtn').on('click', function (e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+            });
+
+            loadDonors();
+            loadDonations();
+            $('#searchBtn').on('click', function () { currentPage = 0; loadDonations(); });
+            
+            // 确保日期输入框初始化
+            if (window.initDateInputs) {
+                setTimeout(window.initDateInputs, 200);
+            }
+        });
+
+        function loadDonors() {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: '/api/donors?page=0&size=1000',
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        donorsList = response.data.content || [];
+                        updateDonorSelect();
+                    }
+                },
+                error: function () {
+                    showToast('error', t('toastLoadFailed'));
+                }
+            });
+        }
+
+        function updateDonorSelect() {
+            const select = $('#donorSelect');
+            select.html(`<option value="">${t('donModalSelectPlaceholder')}</option>`);
+            donorsList.forEach(function (donor) {
+                if (donor.active !== false) {
+                    const name = getDonorDisplayName(donor);
+                    select.append(`<option value="${donor.id}">${name} (ID: ${donor.id})</option>`);
+                }
+            });
+        }
+
+        function toggleDonorInput() {
+            const select = $('#donorSelect');
+            const input = $('#donorId');
+            const btn = $('#toggleDonorBtn');
+
+            if (input.is(':visible')) {
+                input.hide();
+                select.show();
+                btn.attr('data-i18n', 'donModalToggleInput').text(t('donModalToggleInput'));
+            } else {
+                select.hide();
+                input.show();
+                btn.attr('data-i18n', 'donModalToggleSelect').text(t('donModalToggleSelect'));
+            }
+        }
+
+        function updateDonorId() {
+            const selectedId = $('#donorSelect').val();
+            if (selectedId) {
+                $('#donorId').val(selectedId);
+            }
+        }
+
+        function resetFilters() {
+            $('#donorIdFilter').val('');
+            $('#typeFilter').val('');
+            $('#statusFilter').val('');
+            $('#fromDate').val('');
+            $('#toDate').val('');
+            currentPage = 0;
+            loadDonations();
+        }
+
+        function loadDonations() {
+            const token = localStorage.getItem('token');
+            const donorId = $('#donorIdFilter').val();
+            const type = $('#typeFilter').val();
+            const status = $('#statusFilter').val();
+            const fromDate = $('#fromDate').val();
+            const toDate = $('#toDate').val();
+
+            let url = `/api/donations?page=${currentPage}&size=${pageSize}`;
+            if (donorId) url += `&donorId=${donorId}`;
+            if (type) url += `&type=${type}`;
+            if (status) url += `&status=${status}`;
+            if (fromDate) url += `&fromDate=${fromDate}T00:00:00`;
+            if (toDate) url += `&toDate=${toDate}T23:59:59`;
+
+            $('#donationTableBody').html(`<tr><td colspan="8" class="text-center">${t('textLoading')}</td></tr>`);
+
+            $.ajax({
+                url,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        const content = response.data.content || [];
+                        displayDonations(content);
+                        updatePagination(response.data.totalPages || 0);
+                        updateStats(content);
+                    } else {
+                        showLoadError();
+                    }
+                },
+                error: function(xhr) {
+                    showLoadError(xhr);
+                }
+            });
+        }
+
+        function showLoadError(xhr) {
+            let errorMsg = t('toastLoadFailed');
+            if (xhr && xhr.responseJSON) {
+                if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                    errorMsg = xhr.responseJSON.error.message;
+                } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                    errorMsg = xhr.responseJSON.error;
+                } else if (xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+            }
+            showToast('error', errorMsg);
+            $('#donationTableBody').html(`<tr><td colspan="8" class="text-center text-danger">${errorMsg}</td></tr>`);
+        }
+
+        function displayDonations(donations) {
+            if (donations.length === 0) {
+                $('#donationTableBody').html(`<tr><td colspan="8" class="text-center text-muted">${t('textNoData')}</td></tr>`);
+                return;
+            }
+
+            const tComplete = t('donCompleteTitle');
+            const tCancel = t('donCancelTitle');
+            const tView = t('actionViewTitle');
+
+            const rows = donations.map(function (donation) {
+                const plannedAt = DateUtils.formatDateTime(donation.plannedAt);
+                const performedAt = DateUtils.formatDateTime(donation.performedAt);
+                const donorCell = donation.donorName || (donation.donorId ? `ID: ${donation.donorId}` : t('textUnknown'));
+
+                let actions = '';
+                if (donation.status === 'PLANNED') {
+                    actions = `
+                        <button class="btn btn-sm btn-outline-success" onclick="openCompleteModal(${donation.id})" title="${tComplete}">✓</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="openCancelModal(${donation.id})" title="${tCancel}">✗</button>
+                    `;
+                }
+                actions += `<button class="btn btn-sm btn-outline-info" onclick="viewDonation(${donation.id})" title="${tView}">👁️</button>`;
+
+                const volumeCell = (donation.volumeMl !== null && donation.volumeMl !== undefined)
+                    ? donation.volumeMl
+                    : t('textUnknown');
+
+                return `
+                    <tr>
+                        <td>${donation.id || t('textUnknown')}</td>
+                        <td>${donorCell}</td>
+                        <td>${getTypeLabel(donation.type)}</td>
+                        <td>${plannedAt}</td>
+                        <td>${performedAt}</td>
+                        <td>${volumeCell}</td>
+                        <td>${getStatusBadge(donation.status)}</td>
+                        <td>${actions}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            $('#donationTableBody').html(rows);
+        }
+
+        function updatePagination(totalPages) {
+            let html = '';
+            for (let i = 0; i < totalPages; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadDonations();
+        }
+
+        function openAddModal() {
+            $('#donationModalLabel').text(t('donModalTitleAdd'));
+            $('#donationForm')[0].reset();
+            $('#donorSelect').show();
+            $('#donorId').hide();
+            $('#toggleDonorBtn').attr('data-i18n', 'donModalToggleInput').text(t('donModalToggleInput'));
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            $('#plannedAt').val(now.toISOString().slice(0, 16));
+        }
+
+        function openCompleteModal(id) {
+            $('#completeDonationId').val(id);
+            $('#completeForm')[0].reset();
+            $('#performedAt').val(new Date().toISOString().slice(0, 16));
+            $('#completeModal').modal('show');
+        }
+
+        function openCancelModal(id) {
+            $('#cancelDonationId').val(id);
+            $('#cancelForm')[0].reset();
+            $('#cancelModal').modal('show');
+        }
+
+        function viewDonation(id) {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: `/api/donations/${id}`,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function (response) {
+                    if (response.success && response.data) {
+                        const d = response.data;
+                        $('#detailId').text(d.id || t('textUnknown'));
+                        $('#detailDonor').text(d.donorName || (d.donorId ? `ID: ${d.donorId}` : t('textUnknown')));
+                        $('#detailType').text(getTypeLabel(d.type));
+                        $('#detailStatus').html(getStatusBadge(d.status));
+                        $('#detailPlannedAt').text(DateUtils.formatDateTime(d.plannedAt));
+                        $('#detailPerformedAt').text(DateUtils.formatDateTime(d.performedAt));
+                        $('#detailVolume').text(d.volumeMl ? `${d.volumeMl} ml` : t('textUnknown'));
+                        $('#detailPreCheckId').text(d.preCheckId || t('textUnknown'));
+                        $('#detailNotes').text(d.notes || t('textUnknown'));
+                        $('#detailModal').modal('show');
+                    } else {
+                        showToast('error', t('donToastDetailFailed'));
+                    }
+                },
+                error: function () {
+                    showToast('error', t('donToastDetailFailed'));
+                }
+            });
+        }
+
+        function updateStats(donations) {
+            let total = donations.length;
+            let planned = 0;
+            let completed = 0;
+            let totalVolume = 0;
+
+            donations.forEach(function (d) {
+                if (d.status === 'PLANNED') planned++;
+                if (d.status === 'COMPLETED') {
+                    completed++;
+                    if (d.volumeMl) totalVolume += d.volumeMl;
+                }
+            });
+
+            $('#totalDonations').text(total);
+            $('#plannedDonations').text(planned);
+            $('#completedDonations').text(completed);
+            $('#totalVolume').text(totalVolume > 0 ? totalVolume.toFixed(1) : '0');
+        }
+
+        function saveDonation() {
+            if (!$('#donationForm')[0].checkValidity()) {
+                $('#donationForm')[0].reportValidity();
+                return;
+            }
+
+            const donorId = $('#donorSelect').is(':visible') ? $('#donorSelect').val() : $('#donorId').val();
+            if (!donorId) {
+                showToast('error', t('donToastInvalidDonor'));
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const plannedAtValue = $('#donationForm #plannedAt').val();
+            const formattedPlannedAt = DateUtils.formatDateTimeForApi(plannedAtValue);
+            if (!formattedPlannedAt) {
+                showToast('error', t('donToastInvalidTime'));
+                return;
+            }
+
+            const data = {
+                donorId: parseInt(donorId, 10),
+                type: $('#donationForm #type').val(),
+                plannedAt: formattedPlannedAt,
+                volumeMl: $('#donationForm #volumeMl').val() ? parseFloat($('#donationForm #volumeMl').val()) : null,
+                preCheckId: $('#donationForm #preCheckId').val() ? parseInt($('#donationForm #preCheckId').val(), 10) : null,
+                notes: $('#donationForm #notes').val() || null
+            };
+
+            $.ajax({
+                url: '/api/donations',
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function () {
+                    $('#donationModal').modal('hide');
+                    loadDonations();
+                    showToast('success', t('donToastSaveSuccess'));
+                },
+                error: function (xhr) {
+                    let errorMsg = t('donToastSaveFailed');
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function completeDonation() {
+            if (!$('#completeForm')[0].checkValidity()) {
+                $('#completeForm')[0].reportValidity();
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const id = $('#completeDonationId').val();
+            const performedAtValue = $('#completeForm #performedAt').val();
+            const formattedPerformedAt = DateUtils.formatDateTimeForApi(performedAtValue);
+            if (!formattedPerformedAt) {
+                showToast('error', t('donToastInvalidTime'));
+                return;
+            }
+            const data = {
+                performedAt: formattedPerformedAt,
+                volumeMl: parseFloat($('#completeForm #completeVolume').val()),
+                notes: $('#completeForm #completeNotes').val() || null
+            };
+
+            $.ajax({
+                url: `/api/donations/${id}/complete`,
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function () {
+                    $('#completeModal').modal('hide');
+                    loadDonations();
+                    showToast('success', t('donToastCompleteSuccess'));
+                },
+                error: function (xhr) {
+                    let errorMsg = t('donToastCompleteFailed');
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function cancelDonation() {
+            if (!$('#cancelForm')[0].checkValidity()) {
+                $('#cancelForm')[0].reportValidity();
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const id = $('#cancelDonationId').val();
+            const data = {
+                reason: $('#cancelForm #reason').val()
+            };
+
+            $.ajax({
+                url: `/api/donations/${id}/cancel`,
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function () {
+                    $('#cancelModal').modal('hide');
+                    loadDonations();
+                    showToast('success', t('donToastCancelSuccess'));
+                },
+                error: function (xhr) {
+                    let errorMsg = t('donToastCancelFailed');
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function showToast(type, message) {
+            const bgColor = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            setTimeout(() => $('.toast').last().remove(), 3000);
+        }
+
+        function getDonorDisplayName(donor) {
+            if (!donor) return t('textUnknown');
+            const displayName = [donor.firstName, donor.lastName].filter(Boolean).join(' ').trim();
+            if (displayName) return displayName;
+            return donor.fullName || donor.name || t('textUnknown');
+        }
+
+    </script>
+</body>
+
+</html>

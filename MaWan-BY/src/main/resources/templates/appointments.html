@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="titleAppointments">预约管理 - 血液与骨髓捐献管理系统</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard" data-i18n="brand">🩸 捐献管理系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item dropdown language-switcher me-2">
+                        <button class="btn btn-light btn-sm dropdown-toggle" id="languageDropdown" data-bs-toggle="dropdown">
+                            🌐 <span data-i18n="langLabel" data-current-lang-label>中文</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item lang-option" data-lang="zh" data-i18n="langChinese">中文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="en" data-i18n="langEnglish">英文</a></li>
+                            <li><a class="dropdown-item lang-option" data-lang="ru" data-i18n="langRussian">俄语</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span id="currentUser">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn" data-i18n="logout">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/dashboard" data-i18n="navDashboard">📊 仪表板</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donors" data-i18n="navDonors">👥 捐献者管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/medical-checks" data-i18n="navMedicalChecks">🏥 体检记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/donations" data-i18n="navDonations">💉 捐献记录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/inventory" data-i18n="navInventory">📦 库存管理</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="/appointments" data-i18n="navAppointments">📅 预约管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/reports" data-i18n="navReports">📈 统计报表</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/users" data-i18n="navUsers">⚙️ 用户管理</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3 border-bottom">
+                    <h2 data-i18n="headingAppointments">预约管理</h2>
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="page-toolbar">
+                        <div class="filter-grid">
+                            <div>
+                                <input type="number" class="form-control" id="donorIdFilter" placeholder="捐献者ID" data-i18n-placeholder="apptFilterDonorPlaceholder">
+                            </div>
+                            <div>
+                                <label class="form-label visually-hidden" for="statusFilter" data-i18n="apptFilterStatusLabel">状态筛选</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="" data-i18n="optionAllStatus">全部状态</option>
+                                    <option value="PLANNED" data-i18n="apptStatusPlanned">计划中</option>
+                                    <option value="CONFIRMED" data-i18n="apptStatusConfirmed">已确认</option>
+                                    <option value="CANCELLED" data-i18n="apptStatusCancelled">已取消</option>
+                                    <option value="NO_SHOW" data-i18n="apptStatusNoShow">未到</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="datetime-local" class="form-control" id="fromDate" placeholder="开始时间" data-i18n-placeholder="apptFilterFromPlaceholder">
+                            </div>
+                            <div>
+                                <input type="datetime-local" class="form-control" id="toDate" placeholder="结束时间" data-i18n-placeholder="apptFilterToPlaceholder">
+                            </div>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-outline-primary" type="button" id="searchBtn">
+                                <span class="me-1">🔍</span><span data-i18n="apptButtonSearch">搜索</span>
+                            </button>
+                            <button class="btn btn-primary add-record-btn" data-bs-toggle="modal" data-bs-target="#appointmentModal" onclick="openAddModal()">
+                                <span class="icon-dot">＋</span>
+                                <span class="label" data-i18n="apptButtonAdd">添加预约</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="apptTableId">ID</th>
+                                    <th data-i18n="apptTableDonor">捐献者</th>
+                                    <th data-i18n="apptTableType">类型</th>
+                                    <th data-i18n="apptTableStart">开始时间</th>
+                                    <th data-i18n="apptTableEnd">结束时间</th>
+                                    <th data-i18n="apptTableLocation">地点</th>
+                                    <th data-i18n="apptTableDoctor">医生</th>
+                                    <th data-i18n="apptTableStatus">状态</th>
+                                    <th data-i18n="apptTableActions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentTableBody">
+                                <tr><td colspan="9" class="text-center" data-i18n="textLoading">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav>
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </nav>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加/编辑预约模态框 -->
+    <div class="modal fade" id="appointmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle" data-i18n="apptModalTitleAdd">添加预约</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="appointmentForm">
+                        <input type="hidden" id="appointmentId">
+                        <div class="mb-3">
+                            <label class="form-label" for="donorId" data-i18n="apptLabelDonorId">捐献者ID *</label>
+                            <input type="text" class="form-control" id="donorId" list="appointmentDonorOptions" required pattern="\d+">
+                            <datalist id="appointmentDonorOptions"></datalist>
+                            <div class="form-text" data-i18n="apptDonorHint">可输入ID或选择已有捐献者</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="type" data-i18n="apptLabelType">预约类型 *</label>
+                            <select class="form-select" id="type" required>
+                                <option value="" data-i18n="optionPleaseSelect">请选择</option>
+                                <option value="BLOOD" data-i18n="apptTypeBlood">血液</option>
+                                <option value="BONE_MARROW" data-i18n="apptTypeBoneMarrow">骨髓</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="startTime" data-i18n="apptLabelStart">开始时间 *</label>
+                            <input type="datetime-local" class="form-control" id="startTime" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="endTime" data-i18n="apptLabelEnd">结束时间 *</label>
+                            <input type="datetime-local" class="form-control" id="endTime" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="location" data-i18n="apptLabelLocation">地点</label>
+                            <input type="text" class="form-control" id="location">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="doctorName" data-i18n="apptLabelDoctor">医生姓名</label>
+                            <input type="text" class="form-control" id="doctorName">
+                        </div>
+                        <div class="mb-3" id="statusGroup" style="display: none;">
+                            <label class="form-label" for="status" data-i18n="apptLabelStatus">状态</label>
+                            <select class="form-select" id="status">
+                                <option value="PLANNED" data-i18n="apptStatusPlanned">计划中</option>
+                                <option value="CONFIRMED" data-i18n="apptStatusConfirmed">已确认</option>
+                                <option value="CANCELLED" data-i18n="apptStatusCancelled">已取消</option>
+                                <option value="NO_SHOW" data-i18n="apptStatusNoShow">未到</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="labelCancel">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAppointment()" data-i18n="labelSave">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
+    <script th:src="@{/js/dateUtils.js}"></script>
+    <script>
+        let currentPage = 0;
+        const pageSize = 10;
+        let donorsCache = [];
+
+        $(document).ready(function() {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+            
+            $('#currentUser').text(localStorage.getItem('username') || t('textUserPlaceholder'));
+            $('#logoutBtn').on('click', function(e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+            });
+            
+            loadAppointments();
+            loadDonorOptions();
+            $('#searchBtn').on('click', function() { currentPage = 0; loadAppointments(); });
+            
+            // 确保日期输入框初始化
+            if (window.initDateInputs) {
+                setTimeout(window.initDateInputs, 200);
+            }
+        });
+
+        function loadAppointments() {
+            const token = localStorage.getItem('token');
+            const donorId = $('#donorIdFilter').val();
+            const status = $('#statusFilter').val();
+            const from = $('#fromDate').val();
+            const to = $('#toDate').val();
+            
+            let url = `/api/appointments?page=${currentPage}&size=${pageSize}`;
+            if (donorId) url += `&donorId=${donorId}`;
+            if (status) url += `&status=${status}`;
+            if (from) url += `&from=${from}:00`;
+            if (to) url += `&to=${to}:00`;
+            
+            $.ajax({
+                url: url,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        displayAppointments(response.data.content || []);
+                        updatePagination(response.data.totalPages || 0);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = t('toastLoadFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                    $('#appointmentTableBody').html(`<tr><td colspan="9" class="text-center text-danger">${errorMsg}</td></tr>`);
+                }
+            });
+        }
+
+        function displayAppointments(appointments) {
+            if (appointments.length === 0) {
+                $('#appointmentTableBody').html(`<tr><td colspan="9" class="text-center text-muted">${t('textNoData')}</td></tr>`);
+                return;
+            }
+            
+            const statusMap = {
+                'PLANNED': `<span class="badge bg-info">${t('apptStatusPlanned')}</span>`,
+                'CONFIRMED': `<span class="badge bg-success">${t('apptStatusConfirmed')}</span>`,
+                'CANCELLED': `<span class="badge bg-secondary">${t('apptStatusCancelled')}</span>`,
+                'NO_SHOW': `<span class="badge bg-danger">${t('apptStatusNoShow')}</span>`
+            };
+            const typeMap = { 'BLOOD': t('apptTypeBlood'), 'BONE_MARROW': t('apptTypeBoneMarrow') };
+            
+            let html = '';
+            appointments.forEach(function(apt) {
+                html += `
+                    <tr>
+                        <td>${apt.id || t('textUnknown')}</td>
+                        <td>${apt.donorName || `ID: ${apt.donorId}`}</td>
+                        <td>${typeMap[apt.type] || t('textUnknown')}</td>
+                        <td>${DateUtils.formatDateTime(apt.startTime)}</td>
+                        <td>${DateUtils.formatDateTime(apt.endTime)}</td>
+                        <td>${apt.location || t('textUnknown')}</td>
+                        <td>${apt.doctorName || t('textUnknown')}</td>
+                        <td>${statusMap[apt.status] || t('textUnknown')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editAppointment(${apt.id})" title="${t('actionEditTitle')}">✏️</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewAppointment(${apt.id})" title="${t('actionViewTitle')}">👁️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            $('#appointmentTableBody').html(html);
+        }
+
+        function updatePagination(totalPages) {
+            let html = '';
+            for (let i = 0; i < totalPages; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            $('#pagination').html(html);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            loadAppointments();
+        }
+
+        function openAddModal() {
+            $('#modalTitle').text(t('apptModalTitleAdd'));
+            $('#appointmentForm')[0].reset();
+            $('#appointmentId').val('');
+            $('#statusGroup').hide();
+            $('#donorId').val('');
+        }
+
+        function editAppointment(id) {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: `/api/appointments/${id}`,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        const apt = response.data;
+                        $('#modalTitle').text(t('apptModalTitleEdit'));
+                        $('#appointmentId').val(apt.id);
+                        $('#donorId').val(apt.donorId);
+                        $('#type').val(apt.type);
+                        $('#startTime').val(apt.startTime ? apt.startTime.replace('T', 'T').substring(0, 16) : '');
+                        $('#endTime').val(apt.endTime ? apt.endTime.replace('T', 'T').substring(0, 16) : '');
+                        $('#location').val(apt.location || '');
+                        $('#doctorName').val(apt.doctorName || '');
+                        $('#status').val(apt.status);
+                        $('#statusGroup').show();
+                        $('#appointmentModal').modal('show');
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = t('toastLoadDataFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function viewAppointment(id) {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: `/api/appointments/${id}`,
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        const apt = response.data;
+                        const statusMap = { 
+                            'PLANNED': t('apptStatusPlanned'), 
+                            'CONFIRMED': t('apptStatusConfirmed'), 
+                            'CANCELLED': t('apptStatusCancelled'), 
+                            'NO_SHOW': t('apptStatusNoShow') 
+                        };
+                        const typeMap = { 'BLOOD': t('apptTypeBlood'), 'BONE_MARROW': t('apptTypeBoneMarrow') };
+                        const detail = `${t('apptDetailTitle')}\n\n${t('apptDetailDonor')}: ${apt.donorName || `ID: ${apt.donorId}`}\n${t('apptDetailType')}: ${typeMap[apt.type] || t('textUnknown')}\n${t('apptDetailStart')}: ${DateUtils.formatDateTime(apt.startTime)}\n${t('apptDetailEnd')}: ${DateUtils.formatDateTime(apt.endTime)}\n${t('apptDetailLocation')}: ${apt.location || t('textUnknown')}\n${t('apptDetailDoctor')}: ${apt.doctorName || t('textUnknown')}\n${t('apptDetailStatus')}: ${statusMap[apt.status] || t('textUnknown')}`;
+                        alert(detail);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = t('toastLoadDetailFailed');
+                    if (xhr && xhr.responseJSON) {
+                        if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                            errorMsg = xhr.responseJSON.error.message;
+                        } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                    }
+                    showToast('error', errorMsg);
+                }
+            });
+        }
+
+        function saveAppointment() {
+            if (!$('#appointmentForm')[0].checkValidity()) {
+                $('#appointmentForm')[0].reportValidity();
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            const id = $('#appointmentId').val();
+            
+            if (id) {
+                // 更新
+                const startTimeFormatted = DateUtils.formatDateTimeForApi($('#startTime').val());
+                const endTimeFormatted = DateUtils.formatDateTimeForApi($('#endTime').val());
+                if (!startTimeFormatted || !endTimeFormatted) {
+                    showToast('error', t('apptToastInvalidTime'));
+                    return;
+                }
+                const data = {
+                    startTime: startTimeFormatted,
+                    endTime: endTimeFormatted,
+                    status: $('#status').val() || null,
+                    location: $('#location').val() || null,
+                    doctorName: $('#doctorName').val() || null
+                };
+                
+                $.ajax({
+                    url: `/api/appointments/${id}`,
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        $('#appointmentModal').modal('hide');
+                        loadAppointments();
+                        showToast('success', t('toastSaveSuccess'));
+                    },
+                    error: function(xhr) {
+                        let errorMsg = t('toastSaveFailed');
+                        if (xhr && xhr.responseJSON) {
+                            if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                                errorMsg = xhr.responseJSON.error.message;
+                            } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                                errorMsg = xhr.responseJSON.error;
+                            } else if (xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                        }
+                        showToast('error', errorMsg);
+                    }
+                });
+            } else {
+                // 创建
+                const donorIdValue = $('#donorId').val().trim();
+                if (!/^\d+$/.test(donorIdValue)) {
+                    showToast('error', t('apptToastInvalidDonorId'));
+                    return;
+                }
+                const donorExists = donorsCache.some(d => String(d.id) === donorIdValue);
+                if (!donorExists) {
+                    showToast('error', t('apptToastDonorMissing'));
+                    return;
+                }
+                const startTimeFormatted = DateUtils.formatDateTimeForApi($('#startTime').val());
+                const endTimeFormatted = DateUtils.formatDateTimeForApi($('#endTime').val());
+                if (!startTimeFormatted || !endTimeFormatted) {
+                    showToast('error', t('apptToastInvalidTime'));
+                    return;
+                }
+                const data = {
+                    donorId: parseInt(donorIdValue, 10),
+                    type: $('#type').val(),
+                    startTime: startTimeFormatted,
+                    endTime: endTimeFormatted,
+                    location: $('#location').val() || null,
+                    doctorName: $('#doctorName').val() || null
+                };
+                
+                $.ajax({
+                    url: '/api/appointments',
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        $('#appointmentModal').modal('hide');
+                        loadAppointments();
+                        showToast('success', t('toastSaveSuccess'));
+                    },
+                    error: function(xhr) {
+                        let errorMsg = t('toastSaveFailed');
+                        if (xhr && xhr.responseJSON) {
+                            if (xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                                errorMsg = xhr.responseJSON.error.message;
+                            } else if (xhr.responseJSON.error && typeof xhr.responseJSON.error === 'string') {
+                                errorMsg = xhr.responseJSON.error;
+                            } else if (xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                        }
+                        showToast('error', errorMsg);
+                    }
+                });
+            }
+        }
+        
+        function showToast(type, message) {
+            const bgColor = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            $('body').append(toastHtml);
+            const toast = new bootstrap.Toast($('.toast').last()[0]);
+            toast.show();
+            setTimeout(() => $('.toast').last().remove(), 3000);
+        }
+        
+        function loadDonorOptions() {
+            const token = localStorage.getItem('token');
+            $.ajax({
+                url: '/api/donors?page=0&size=200',
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        donorsCache = response.data.content || [];
+                        renderDonorOptions();
+                    }
+                },
+                error: function() {
+                    console.warn('加载捐献者列表失败');
+                }
+            });
+        }
+        
+        function renderDonorOptions() {
+            if (!Array.isArray(donorsCache)) return;
+            const html = donorsCache.map(donor => {
+                const name = getDonorDisplayName(donor);
+                return `<option value="${donor.id}">${name} (ID: ${donor.id})</option>`;
+            }).join('');
+            $('#appointmentDonorOptions').html(html);
+        }
+        
+        function getDonorDisplayName(donor) {
+            if (!donor) return '未知捐献者';
+            const displayName = [donor.firstName, donor.lastName].filter(Boolean).join(' ') || donor.fullName || donor.name;
+            return displayName || '未命名';
+        }
+        
+    </script>
+</body>
+</html>
+
