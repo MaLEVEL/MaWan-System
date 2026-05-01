@@ -14,7 +14,7 @@
     </div>
     <div class="register-card">
       <h2 class="title">{{ $t('register.title') }}</h2>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" @submit.prevent="handleRegister">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="150px" @submit.prevent="handleRegister">
         <el-divider content-position="left">{{ $t('register.accountInfo') }}</el-divider>
         <el-form-item :label="$t('auth.username')" prop="username">
           <el-input v-model="form.username" :placeholder="t('auth.usernameLength')" />

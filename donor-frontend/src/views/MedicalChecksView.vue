@@ -87,6 +87,8 @@ onMounted(loadData)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .check-date {
@@ -115,5 +117,6 @@ onMounted(loadData)
   margin-top: 8px;
   font-size: 14px;
   color: #606266;
+  word-break: break-word;
 }
 </style>

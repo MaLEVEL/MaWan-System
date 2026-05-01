@@ -30,7 +30,7 @@
     </div>
 
     <el-dialog v-model="showDialog" :title="$t('appointment.newAppointment')" width="480px">
-      <el-form ref="bookingFormRef" :model="bookingForm" :rules="bookingRules" label-width="90px">
+      <el-form ref="bookingFormRef" :model="bookingForm" :rules="bookingRules" label-width="140px">
         <el-form-item :label="$t('appointment.appointmentType')" prop="appointmentType">
           <el-select v-model="bookingForm.appointmentType" style="width: 100%">
             <el-option :label="$t('appointmentType.BLOOD')" value="BLOOD" />

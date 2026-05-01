@@ -106,7 +106,7 @@ export default {
   },
   profile: {
     title: 'Личная информация',
-    basicInfo: 'Основная информация (только чтение)',
+    basicInfo: 'Основная информация',
     lastName: 'Фамилия',
     firstName: 'Имя',
     dateOfBirth: 'Дата рождения',
@@ -114,7 +114,7 @@ export default {
     passportNumber: 'Номер документа',
     bloodType: 'Группа крови',
     hlaType: 'Тип HLA',
-    contactInfo: 'Контактная информация (редактируемая)',
+    contactInfo: 'Контактная информация',
     phone: 'Телефон',
     email: 'Эл. почта',
     address: 'Адрес',
@@ -198,7 +198,7 @@ export default {
   conclusion: {
     FIT: 'Годен',
     UNFIT: 'Негоден',
-    NEEDS_RECHECK: 'Требуется повторная проверка'
+    NEEDS_RECHECK: 'На перепроверку'
   },
   lang: {
     zh: '中文',

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -oP '--el-form-label[^;]*;' \"c:/Users/32601/Desktop/毕业设计/MaWan-System/donor-frontend/node_modules/element-plus/dist/index.css\")"
+    ]
+  }
+}

@@ -2,7 +2,7 @@
   <div class="profile">
     <h2>{{ $t('profile.title') }}</h2>
     <el-card v-if="donor" style="margin-top: 16px">
-      <el-form ref="formRef" :model="form" label-width="100px" :disabled="!editing">
+      <el-form ref="formRef" :model="form" label-width="180px" :disabled="!editing">
         <el-divider content-position="left">{{ $t('profile.basicInfo') }}</el-divider>
         <el-row :gutter="16">
           <el-col :xs="24" :sm="12">

@@ -31,7 +31,7 @@
         </div>
         <div class="card-row" v-if="d.notes">
           <span class="label">{{ $t('common.notes') }}：</span>
-          <span>{{ d.notes }}</span>
+          <span class="value">{{ d.notes }}</span>
         </div>
       </el-card>
     </div>
@@ -122,7 +122,12 @@ onMounted(loadData)
 
 .donation-card .label {
   color: #909399;
-  width: 60px;
+  min-width: 60px;
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.donation-card .value {
+  word-break: break-word;
 }
 </style>

@@ -39,16 +39,17 @@ spring:
 ### 启动后端（管理后台）
 
 ```bash
-cd C:\Users\32601\Desktop\毕业设计\MaWan-BY
+cd C:\Users\32601\Desktop\毕业设计\MaWan-System\MaWan-BY
 .\mvnw.cmd spring-boot:run
 ```
 
 ### 启动前端（捐献者客户端）
 
 ```bash
-cd C:\Users\32601\Desktop\毕业设计\donor-frontend
+cd C:\Users\32601\Desktop\毕业设计\MaWan-System\donor-frontend
 npm install
 npm run dev
+npm.cmd run dev
 ```
 
 ### 访问地址
